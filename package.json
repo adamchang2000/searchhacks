@@ -1,0 +1,13 @@
+{
+  "name": "searchhacks",
+  "private": true,
+  "workspaces": [
+    "lib/optimizer-protocol",
+    "lib/sdk",
+    "app/optimizer-ui",
+    "app/mock-driver"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

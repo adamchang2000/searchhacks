@@ -1,0 +1,508 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Optimizer API",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "optimizer_server_src_api_health_health",
+        "summary": "Health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/searches/route": {
+      "post": {
+        "operationId": "optimizer_server_src_api_searches_route",
+        "summary": "Route",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "searches"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/searches/{search_id}/outcome": {
+      "post": {
+        "operationId": "optimizer_server_src_api_searches_report_outcome",
+        "summary": "Report Outcome",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "search_id",
+            "schema": {
+              "format": "uuid",
+              "title": "Search Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "searches"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomeRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/searches/{search_id}/feedback": {
+      "post": {
+        "operationId": "optimizer_server_src_api_searches_submit_feedback",
+        "summary": "Submit Feedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "search_id",
+            "schema": {
+              "format": "uuid",
+              "title": "Search Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "searches"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/searches": {
+      "get": {
+        "operationId": "optimizer_server_src_api_searches_list_searches",
+        "summary": "List Searches",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "searches"
+        ]
+      }
+    },
+    "/api/stats/providers": {
+      "get": {
+        "operationId": "optimizer_server_src_api_stats_provider_stats",
+        "summary": "Provider Stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderStatsOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "stats"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "RouteResponse": {
+        "properties": {
+          "search_id": {
+            "format": "uuid",
+            "title": "Search Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_id",
+          "provider"
+        ],
+        "title": "RouteResponse",
+        "type": "object"
+      },
+      "RouteRequest": {
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "available_providers": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Available Providers",
+            "type": "array"
+          },
+          "client_metadata": {
+            "additionalProperties": true,
+            "title": "Client Metadata",
+            "type": "object"
+          }
+        },
+        "required": [
+          "query",
+          "available_providers"
+        ],
+        "title": "RouteRequest",
+        "type": "object"
+      },
+      "OkResponse": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "OkResponse",
+        "type": "object"
+      },
+      "OutcomeRequest": {
+        "properties": {
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "num_results": {
+            "title": "Num Results",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "required": [
+          "latency_ms",
+          "num_results"
+        ],
+        "title": "OutcomeRequest",
+        "type": "object"
+      },
+      "FeedbackRequest": {
+        "properties": {
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "required": [
+          "score"
+        ],
+        "title": "FeedbackRequest",
+        "type": "object"
+      },
+      "FeedbackOut": {
+        "properties": {
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score",
+          "comment",
+          "created_at"
+        ],
+        "title": "FeedbackOut",
+        "type": "object"
+      },
+      "SearchOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "available_providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Providers",
+            "type": "array"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "client_metadata": {
+            "additionalProperties": true,
+            "title": "Client Metadata",
+            "type": "object"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "num_results": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Results"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackOut"
+            },
+            "title": "Feedback",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "query",
+          "available_providers",
+          "provider",
+          "client_metadata",
+          "latency_ms",
+          "num_results",
+          "error",
+          "feedback"
+        ],
+        "title": "SearchOut",
+        "type": "object"
+      },
+      "ProviderStatsOut": {
+        "properties": {
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "num_searches": {
+            "title": "Num Searches",
+            "type": "integer"
+          },
+          "num_feedback": {
+            "title": "Num Feedback",
+            "type": "integer"
+          },
+          "mean_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Score"
+          },
+          "mean_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Latency Ms"
+          }
+        },
+        "required": [
+          "provider",
+          "num_searches",
+          "num_feedback",
+          "mean_score",
+          "mean_latency_ms"
+        ],
+        "title": "ProviderStatsOut",
+        "type": "object"
+      }
+    }
+  },
+  "servers": []
+}

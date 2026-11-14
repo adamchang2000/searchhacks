@@ -1,0 +1,22 @@
+[project]
+name = "optimizer-server"
+version = "0.1.0"
+description = "SearchHacks optimizer server"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.2",
+    "django-ninja>=1.4",
+    "django-cors-headers>=4.7",
+    "djangorestframework-simplejwt>=5.5",
+    "psycopg[binary]>=3.2",
+    "python-dotenv>=1.1",
+    "uvicorn>=0.34",
+]
+
+[project.scripts]
+optimizer-manage = "optimizer_server.bin.manage:main"
+optimizer-server = "optimizer_server.bin.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

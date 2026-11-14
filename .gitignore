@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Django
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Claude Code
+.claude/
+
+# Environment
+.env
