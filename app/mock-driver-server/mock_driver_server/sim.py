@@ -73,6 +73,9 @@ def db():
             conn.execute("ALTER TABLE " + table + " ADD COLUMN config_revision INTEGER NOT NULL DEFAULT 0")
     if "outcome_probabilities" not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
         conn.execute("ALTER TABLE sim_events ADD COLUMN outcome_probabilities TEXT")
+    conn.execute("""CREATE TABLE IF NOT EXISTS sim_config_changes (
+        run_id TEXT NOT NULL, revision INTEGER NOT NULL, changed_at TEXT NOT NULL,
+        PRIMARY KEY (run_id, revision))""")
     conn.execute("INSERT OR IGNORE INTO sim_config VALUES (1, ?)", (json.dumps(DEFAULT),))
     try:
         with conn:
@@ -250,6 +253,7 @@ def update_run_config(request, run_id: UUID):
             raise HttpError(409, "Run is no longer active")
         conn.execute("UPDATE sim_config SET body=? WHERE id=1", (json.dumps(config),))
         revision = conn.execute("SELECT config_revision FROM sim_runs WHERE id=?", (str(run_id),)).fetchone()["config_revision"]
+        conn.execute("INSERT INTO sim_config_changes VALUES (?,?,?)", (str(run_id), revision, now()))
     with _lock:
         control = _active.get(str(run_id))
         if control:
@@ -322,6 +326,11 @@ def timeseries(request, run_id: UUID, outcome: str = "purchase_conversion", cate
                SELECT * FROM cumulative WHERE feedback_submitted_at >= ? ORDER BY id""",
             (path, str(run_id), category_id, path, datetime.fromtimestamp(start, timezone.utc).isoformat()),
         ).fetchall()
+    with db() as conn:
+        changes = [{"revision": row["revision"], "timestamp": datetime.fromisoformat(row["changed_at"]).timestamp()}
+                   for row in conn.execute(
+                       "SELECT revision,changed_at FROM sim_config_changes WHERE run_id=? AND changed_at>=? ORDER BY revision",
+                       (str(run_id), datetime.fromtimestamp(start, timezone.utc).isoformat()))]
     targets = {p: config["success_rates"][str(category_id)].get(p, {}).get(outcome) for p in config["providers"]}
     points = [{"provider": row["provider"], "query": row["query"],
                "rate": row["successes"] / row["samples"], "successes": row["successes"],
@@ -330,7 +339,7 @@ def timeseries(request, run_id: UUID, outcome: str = "purchase_conversion", cate
                "feedback": json.loads(row["feedback"]),
                "timestamp": datetime.fromisoformat(row["feedback_submitted_at"]).timestamp()} for row in rows]
     return {"providers": config["providers"], "points": points, "start": start, "end": end,
-            "outcome": outcome, "category_id": category_id, "categories": categories, "targets": targets}
+            "outcome": outcome, "category_id": category_id, "categories": categories, "targets": targets, "config_changes": changes}
 
 @router.get("/categories")
 def category_catalog(request):
