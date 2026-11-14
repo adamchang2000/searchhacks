@@ -96,6 +96,12 @@ class SearchDistribution(models.Model):
     # Recompute skips writing a snapshot when both are unchanged.
     num_feedback = models.IntegerField()
     feedback_through = models.DateTimeField(null=True, blank=True)
+    # Only searches created at or after this count toward the snapshot. Set by a reset
+    # (POST /api/admin/reset-search-distribution) and carried forward by every later
+    # recompute, so a reset sticks. Null: all searches count.
+    counts_since = models.DateTimeField(null=True, blank=True)
+    # True for a snapshot written by a reset (uniform Beta(1, 1) everywhere).
+    is_reset = models.BooleanField(default=False)
     # True while the snapshot has every cell. Older snapshots are thinned to the global and
     # level-1 cells (all the dashboard's history needs), so history can span a whole run.
     full = models.BooleanField(default=True)

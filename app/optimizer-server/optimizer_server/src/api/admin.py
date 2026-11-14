@@ -16,6 +16,8 @@ class SearchDistributionStatus(Schema):
     computed_at: Optional[datetime]
     num_feedback: int
     num_cells: int
+    # Searches created before this don't count (set by the last reset). Null: all count.
+    counts_since: Optional[datetime]
 
 
 def _status(d: distribution.LoadedDistribution) -> dict:
@@ -24,12 +26,21 @@ def _status(d: distribution.LoadedDistribution) -> dict:
         "computed_at": d.created_at,
         "num_feedback": d.num_feedback,
         "num_cells": len(d.cells),
+        "counts_since": d.counts_since,
     }
 
 
 @router.post("/reload-search-distribution", response=SearchDistributionStatus)
 def reload_search_distribution(request):
     """Load the latest SearchDistribution snapshot into memory. Called by optimizer-recompute."""
+    return _status(distribution.reload())
+
+
+@router.post("/reset-search-distribution", response=SearchDistributionStatus)
+def reset_search_distribution(request):
+    """Route uniformly from now on: write a Beta(1, 1) snapshot, start counting feedback afresh
+    (only searches after now), and load it. History and Search/Feedback rows are kept."""
+    distribution.reset()
     return _status(distribution.reload())
 
 

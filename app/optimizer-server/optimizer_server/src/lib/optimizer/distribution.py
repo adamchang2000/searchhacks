@@ -2,6 +2,9 @@
 
     compute_and_save()  run by `optimizer-recompute`. Aggregates all feedback once, computes
                         every cell's posterior with policy.chain(), writes a SearchDistribution.
+                        Only counts searches since the latest reset (counts_since).
+    reset()             writes a uniform snapshot and starts counting afresh from now
+                        (POST /api/admin/reset-search-distribution).
     reload()            run by the server (POST /api/admin/reload-search-distribution, or lazily
                         on the first which_search). Loads the latest snapshot into memory.
     current()           the in-memory snapshot the hot path reads.
@@ -19,6 +22,7 @@ from datetime import datetime
 from typing import Dict, Iterable, Optional, Set, Tuple
 
 from django.db import transaction
+from django.utils import timezone
 from django.db.models import Count, Max, Q
 
 from searchhacks_types.search_provider import SearchProvider
@@ -136,9 +140,26 @@ def p_best(by_provider: Dict[str, Beta]) -> Dict[str, float]:
     return {p: float(w) for p, w in zip(names, win)}
 
 
-def _fingerprint() -> Tuple[int, Optional[datetime]]:
-    agg = Feedback.objects.aggregate(n=Count("id"), through=Max("created_at"))
+def _fingerprint(since: Optional[datetime]) -> Tuple[int, Optional[datetime]]:
+    qs = Feedback.objects.all() if since is None else Feedback.objects.filter(
+        search__created_at__gte=since
+    )
+    agg = qs.aggregate(n=Count("id"), through=Max("created_at"))
     return agg["n"], agg["through"]
+
+
+def _prune(keep: int, keep_history: int) -> None:
+    """The newest `keep` snapshots stay full; older ones up to `keep_history` are thinned to the
+    global and level-1 cells (the dashboard's history); anything older is deleted."""
+    ids = list(SearchDistribution.objects.values_list("id", flat=True)[: keep_history + 1])
+    if len(ids) > keep:
+        thin = SearchDistribution.objects.filter(id__lte=ids[keep], full=True)
+        SearchDistributionCell.objects.filter(
+            distribution__in=thin, category_l2__isnull=False
+        ).delete()
+        thin.update(full=False)
+    if len(ids) > keep_history:
+        SearchDistribution.objects.filter(id__lte=ids[keep_history]).delete()
 
 
 def compute_and_save(
@@ -146,11 +167,12 @@ def compute_and_save(
 ) -> Optional[SearchDistribution]:
     """Write a new snapshot, or return None if no feedback changed since the latest one.
 
-    The newest `keep` snapshots stay full. Older ones, up to `keep_history`, are thinned to the
-    global and level-1 cells (the dashboard's history); anything older is deleted.
+    Counts only searches since the latest snapshot's `counts_since` (the last reset), and
+    carries that cutoff forward. See _prune() for retention.
     """
-    n, through = _fingerprint()
     latest = SearchDistribution.objects.first()
+    since = latest.counts_since if latest is not None else None
+    n, through = _fingerprint(since)
     if (
         not force
         and latest is not None
@@ -158,12 +180,19 @@ def compute_and_save(
     ):
         return None
 
-    counts = feedback_counts()
+    counts = feedback_counts(since)
     posteriors = compute(counts)
     observed = own_counts(counts)
     wins = {cell: p_best(by_provider) for cell, by_provider in posteriors.items()}
     with transaction.atomic():
-        dist = SearchDistribution.objects.create(num_feedback=n, feedback_through=through)
+        # A reset may have landed while we were computing; don't overwrite it with a snapshot
+        # built from the pre-reset cutoff. The next run picks up the new cutoff.
+        newest = SearchDistribution.objects.first()
+        if (newest.id if newest else None) != (latest.id if latest else None):
+            return None
+        dist = SearchDistribution.objects.create(
+            num_feedback=n, feedback_through=through, counts_since=since
+        )
         SearchDistributionCell.objects.bulk_create(
             [
                 SearchDistributionCell(
@@ -181,15 +210,41 @@ def compute_and_save(
             ],
             batch_size=2000,
         )
-        ids = list(SearchDistribution.objects.values_list("id", flat=True)[: keep_history + 1])
-        if len(ids) > keep:
-            thin = SearchDistribution.objects.filter(id__lte=ids[keep], full=True)
-            SearchDistributionCell.objects.filter(
-                distribution__in=thin, category_l2__isnull=False
-            ).delete()
-            thin.update(full=False)
-        if len(ids) > keep_history:
-            SearchDistribution.objects.filter(id__lte=ids[keep_history]).delete()
+        _prune(keep, keep_history)
+    return dist
+
+
+def reset(keep: int = 20, keep_history: int = 2000) -> SearchDistribution:
+    """Write a uniform snapshot (Beta(1, 1) for every provider in every cell) and set the
+    feedback cutoff to now, so routing starts from scratch and later recomputes only count
+    searches made after the reset. Older snapshots and all Search/Feedback rows are kept."""
+    now = timezone.now()
+    providers = [p.value for p in SearchProvider]
+    share = 1.0 / len(providers)
+    with transaction.atomic():
+        # num_feedback/feedback_through describe "nothing since the cutoff", so recompute
+        # leaves this snapshot alone until feedback for a post-reset search arrives.
+        dist = SearchDistribution.objects.create(
+            num_feedback=0, feedback_through=None, counts_since=now, is_reset=True
+        )
+        SearchDistributionCell.objects.bulk_create(
+            [
+                SearchDistributionCell(
+                    distribution=dist,
+                    category_l1=l1,
+                    category_l2=l2,
+                    provider=p,
+                    alpha=1.0,
+                    beta=1.0,
+                    p_best=share,
+                    n_obs=0,
+                )
+                for l1, l2 in all_cells()
+                for p in providers
+            ],
+            batch_size=2000,
+        )
+        _prune(keep, keep_history)
     return dist
 
 
@@ -203,6 +258,7 @@ class LoadedDistribution:
     created_at: Optional[datetime]
     num_feedback: int
     cells: Dict[Cell, Dict[str, Beta]] = field(default_factory=dict)
+    counts_since: Optional[datetime] = None
 
     def cell(self, l1: Optional[int], l2: Optional[int]) -> CellPosteriors:
         """The finest precomputed cell for (l1, l2), falling back up the hierarchy."""
@@ -228,7 +284,7 @@ def _load_latest() -> LoadedDistribution:
         "category_l1", "category_l2", "provider", "alpha", "beta"
     ):
         cells.setdefault((l1, l2), {})[p] = Beta(a, b)
-    return LoadedDistribution(dist.id, dist.created_at, dist.num_feedback, cells)
+    return LoadedDistribution(dist.id, dist.created_at, dist.num_feedback, cells, dist.counts_since)
 
 
 def reload() -> LoadedDistribution:

@@ -272,6 +272,88 @@
         ]
       }
     },
+    "/api/ui/distribution/history": {
+      "get": {
+        "operationId": "optimizer_server_src_api_ui_distribution_history",
+        "summary": "History",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "l1",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "L1"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "max_points",
+            "schema": {
+              "default": 240,
+              "title": "Max Points",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DistributionHistoryOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Evenly thinned to at most `max_points` snapshots; the latest is always included.",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/api/ui/distribution/{distribution_id}/categories": {
+      "get": {
+        "operationId": "optimizer_server_src_api_ui_distribution_categories",
+        "summary": "Categories",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "distribution_id",
+            "schema": {
+              "title": "Distribution Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotCategoriesOut"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ui"
+        ]
+      }
+    },
     "/api/admin/reload-search-distribution": {
       "post": {
         "operationId": "optimizer_server_src_api_admin_reload_search_distribution",
@@ -290,6 +372,29 @@
           }
         },
         "description": "Load the latest SearchDistribution snapshot into memory. Called by optimizer-recompute.",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/reset-search-distribution": {
+      "post": {
+        "operationId": "optimizer_server_src_api_admin_reset_search_distribution",
+        "summary": "Reset Search Distribution",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchDistributionStatus"
+                }
+              }
+            }
+          }
+        },
+        "description": "Route uniformly from now on: write a Beta(1, 1) snapshot, start counting feedback afresh\n(only searches after now), and load it. History and Search/Feedback rows are kept.",
         "tags": [
           "admin"
         ]
@@ -695,6 +800,144 @@
         "title": "TrafficOut",
         "type": "object"
       },
+      "DistributionHistoryOut": {
+        "properties": {
+          "l1": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "L1"
+          },
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotOut"
+            },
+            "title": "Snapshots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "l1",
+          "snapshots"
+        ],
+        "title": "DistributionHistoryOut",
+        "type": "object"
+      },
+      "ProviderPosteriorOut": {
+        "properties": {
+          "alpha": {
+            "title": "Alpha",
+            "type": "number"
+          },
+          "beta": {
+            "title": "Beta",
+            "type": "number"
+          },
+          "p_best": {
+            "title": "P Best",
+            "type": "number"
+          },
+          "n_obs": {
+            "title": "N Obs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "alpha",
+          "beta",
+          "p_best",
+          "n_obs"
+        ],
+        "title": "ProviderPosteriorOut",
+        "type": "object"
+      },
+      "SnapshotOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "by_provider": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProviderPosteriorOut"
+            },
+            "title": "By Provider",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "by_provider"
+        ],
+        "title": "SnapshotOut",
+        "type": "object"
+      },
+      "CategoryCellOut": {
+        "properties": {
+          "l1": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "L1"
+          },
+          "by_provider": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProviderPosteriorOut"
+            },
+            "title": "By Provider",
+            "type": "object"
+          }
+        },
+        "required": [
+          "l1",
+          "by_provider"
+        ],
+        "title": "CategoryCellOut",
+        "type": "object"
+      },
+      "SnapshotCategoriesOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryCellOut"
+            },
+            "title": "Cells",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "cells"
+        ],
+        "title": "SnapshotCategoriesOut",
+        "type": "object"
+      },
       "SearchDistributionStatus": {
         "properties": {
           "distribution_id": {
@@ -727,13 +970,26 @@
           "num_cells": {
             "title": "Num Cells",
             "type": "integer"
+          },
+          "counts_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Since"
           }
         },
         "required": [
           "distribution_id",
           "computed_at",
           "num_feedback",
-          "num_cells"
+          "num_cells",
+          "counts_since"
         ],
         "title": "SearchDistributionStatus",
         "type": "object"

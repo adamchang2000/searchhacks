@@ -114,6 +114,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ui/distribution/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * History
+         * @description Evenly thinned to at most `max_points` snapshots; the latest is always included.
+         */
+        get: operations["optimizer_server_src_api_ui_distribution_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ui/distribution/{distribution_id}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Categories */
+        get: operations["optimizer_server_src_api_ui_distribution_categories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/reload-search-distribution": {
         parameters: {
             query?: never;
@@ -128,6 +165,27 @@ export interface paths {
          * @description Load the latest SearchDistribution snapshot into memory. Called by optimizer-recompute.
          */
         post: operations["optimizer_server_src_api_admin_reload_search_distribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reset-search-distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Search Distribution
+         * @description Route uniformly from now on: write a Beta(1, 1) snapshot, start counting feedback afresh
+         *     (only searches after now), and load it. History and Search/Feedback rows are kept.
+         */
+        post: operations["optimizer_server_src_api_admin_reset_search_distribution"];
         delete?: never;
         options?: never;
         head?: never;
@@ -292,6 +350,59 @@ export interface components {
             /** Buckets */
             buckets: components["schemas"]["TrafficBucketOut"][];
         };
+        /** DistributionHistoryOut */
+        DistributionHistoryOut: {
+            /** L1 */
+            l1: number | null;
+            /** Snapshots */
+            snapshots: components["schemas"]["SnapshotOut"][];
+        };
+        /** ProviderPosteriorOut */
+        ProviderPosteriorOut: {
+            /** Alpha */
+            alpha: number;
+            /** Beta */
+            beta: number;
+            /** P Best */
+            p_best: number;
+            /** N Obs */
+            n_obs: number;
+        };
+        /** SnapshotOut */
+        SnapshotOut: {
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** By Provider */
+            by_provider: {
+                [key: string]: components["schemas"]["ProviderPosteriorOut"];
+            };
+        };
+        /** CategoryCellOut */
+        CategoryCellOut: {
+            /** L1 */
+            l1: number | null;
+            /** By Provider */
+            by_provider: {
+                [key: string]: components["schemas"]["ProviderPosteriorOut"];
+            };
+        };
+        /** SnapshotCategoriesOut */
+        SnapshotCategoriesOut: {
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Cells */
+            cells: components["schemas"]["CategoryCellOut"][];
+        };
         /** SearchDistributionStatus */
         SearchDistributionStatus: {
             /** Distribution Id */
@@ -302,6 +413,8 @@ export interface components {
             num_feedback: number;
             /** Num Cells */
             num_cells: number;
+            /** Counts Since */
+            counts_since: string | null;
         };
     };
     responses: never;
@@ -450,7 +563,72 @@ export interface operations {
             };
         };
     };
+    optimizer_server_src_api_ui_distribution_history: {
+        parameters: {
+            query?: {
+                l1?: number | null;
+                max_points?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistributionHistoryOut"];
+                };
+            };
+        };
+    };
+    optimizer_server_src_api_ui_distribution_categories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                distribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotCategoriesOut"];
+                };
+            };
+        };
+    };
     optimizer_server_src_api_admin_reload_search_distribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchDistributionStatus"];
+                };
+            };
+        };
+    };
+    optimizer_server_src_api_admin_reset_search_distribution: {
         parameters: {
             query?: never;
             header?: never;

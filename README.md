@@ -68,6 +68,8 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
    times: every submission is appended as a new row, and **only the latest one counts** (outcomes
    it omits are not carried over from earlier submissions). An unknown token returns 404.
 
+Full endpoint reference (protocol, admin, dashboard): [`lib/optimizer-protocol/API_REFERENCE.md`](lib/optimizer-protocol/API_REFERENCE.md).
+
 Dashboard endpoints live under `/api/ui/` (`GET /api/ui/searches` (filterable, paginated), `GET /api/ui/stats/providers`,
 `GET /api/ui/stats/traffic` (searches per time bucket by provider)).
 They back `app/optimizer-ui` only, aren't part of the core protocol, and are free to change with the UI.

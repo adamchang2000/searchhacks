@@ -59,6 +59,10 @@ aggregation. It looks up the precomputed Betas for its cell in memory and sample
 - Routing therefore lags feedback by up to one interval (10s on the VM). Thompson sampling keeps
   drawing per request, so this costs almost nothing. The sample is still drawn per request; only
   the Betas are cached.
+- `POST /api/admin/reset-search-distribution` starts over: it writes a uniform Beta(1, 1)
+  snapshot and sets `counts_since` to now. Every later recompute counts only searches created
+  after that cutoff and carries it forward, so the reset isn't undone on the next run. History
+  and Search/Feedback rows are kept.
 - In-memory state is per process. The server runs as one uvicorn process, so one reload call is
   enough; with more workers, each would need to poll for the latest snapshot id.
 
