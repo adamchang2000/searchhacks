@@ -200,6 +200,17 @@
             "minItems": 1,
             "title": "Available Providers",
             "type": "array"
+          },
+          "override_query_category": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Query Category"
           }
         },
         "required": [
@@ -268,6 +279,32 @@
             "title": "Provider",
             "type": "string"
           },
+          "category_l1": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category L1"
+          },
+          "category_l2": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category L2"
+          },
+          "category_source": {
+            "title": "Category Source",
+            "type": "string"
+          },
           "is_good": {
             "anyOf": [
               {
@@ -286,6 +323,9 @@
           "query",
           "available_providers",
           "provider",
+          "category_l1",
+          "category_l2",
+          "category_source",
           "is_good"
         ],
         "title": "SearchOut",

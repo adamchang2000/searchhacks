@@ -61,6 +61,14 @@ class SqliteConfig(BaseModel):
             "default": {
                 "ENGINE": "django.db.backends.sqlite3",
                 "NAME": name,
+                # Concurrent writers (e.g. the mock driver at --concurrency 8): WAL lets reads
+                # proceed during a write, IMMEDIATE takes the write lock at transaction start
+                # (avoiding upgrade deadlocks), and timeout makes writers wait, not fail.
+                "OPTIONS": {
+                    "transaction_mode": "IMMEDIATE",
+                    "timeout": 20,
+                    "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+                },
             }
         }
 

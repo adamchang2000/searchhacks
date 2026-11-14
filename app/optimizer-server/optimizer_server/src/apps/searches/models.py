@@ -16,6 +16,14 @@ class Search(models.Model):
     # Provider the optimizer chose.
     provider = models.CharField(max_length=64, db_index=True)
 
+    # Where the query sits in the Google Trends hierarchy (lib/types query-category ids).
+    # Both null when unclassified; category_l2 null when classified only to top level.
+    category_l1 = models.IntegerField(null=True, blank=True)
+    category_l2 = models.IntegerField(null=True, blank=True)
+    # What assigned the category: "override", a jev model version (e.g. "jev-1.14.0"),
+    # or "unclassified".
+    category_source = models.CharField(max_length=64, default="unclassified")
+
     class Meta:
         ordering = ["-created_at"]
 

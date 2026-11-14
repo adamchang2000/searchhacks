@@ -11,6 +11,14 @@ export interface SearchHacksClientOptions {
   providers: SearchProvider[];
 }
 
+export interface SearchOptions {
+  /**
+   * Google Trends category id (@searchhacks/types QueryCategory) to use instead of having the
+   * optimizer classify the query. For callers that already know it, e.g. the mock driver.
+   */
+  overrideQueryCategory?: number;
+}
+
 export interface SearchResponse {
   /** Pass this back to `submitFeedback()`. */
   feedbackToken: string;
@@ -36,9 +44,13 @@ export class SearchHacksClient {
     this.providers = new Map(options.providers.map((p) => [p.name, p]));
   }
 
-  async search(query: string): Promise<SearchResponse> {
+  async search(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
     const { data, error } = await this.api.POST("/api/which_search", {
-      body: { query, available_providers: [...this.providers.keys()] },
+      body: {
+        query,
+        available_providers: [...this.providers.keys()],
+        override_query_category: options.overrideQueryCategory ?? null,
+      },
     });
     if (!data) {
       throw new Error(`which_search failed: ${JSON.stringify(error)}`);

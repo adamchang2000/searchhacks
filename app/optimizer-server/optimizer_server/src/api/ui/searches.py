@@ -17,6 +17,9 @@ class SearchOut(Schema):
     query: str
     available_providers: List[str]
     provider: str
+    category_l1: Optional[int]
+    category_l2: Optional[int]
+    category_source: str
     is_good: Optional[bool]
 
     @staticmethod

@@ -1,5 +1,5 @@
 {
-  "env_file": "dev.env",
+  "env_files": ["dev.env", "dev-secrets.env"],
   "db_config": {
     "type": "sqlite",
     "config": {

@@ -11,7 +11,12 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "python-dotenv>=1.1",
     "uvicorn>=0.34",
+    "httpx>=0.28",
+    "searchhacks-types",
 ]
+
+[tool.uv.sources]
+searchhacks-types = { path = "../../lib/types", editable = true }
 
 [project.scripts]
 optimizer-manage = "optimizer_server.bin.manage:main"

@@ -53,11 +53,13 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
 
 | Endpoint | Request | Response |
 |---|---|---|
-| `POST /api/which_search` | `{query, available_providers: string[]}` | `{provider, feedback_token}` |
+| `POST /api/which_search` | `{query, available_providers: string[], override_query_category?: int}` | `{provider, feedback_token}` |
 | `POST /api/submit_feedback` | `{feedback_token, is_good: bool}` | `{ok}` |
 
-1. The caller sends the query and the providers it can dispatch to. The optimizer picks one and
-   returns an opaque `feedback_token` linking later feedback to this call.
+1. The caller sends the query and the providers it can dispatch to. The optimizer classifies the
+   query into a Google Trends category (via jev), picks a provider for that category, and returns
+   an opaque `feedback_token` linking later feedback to this call. Callers that already know the
+   category (the mock driver) pass `override_query_category` to skip classification.
 2. The caller dispatches the query to `provider` itself.
 3. The caller reports `is_good` with that token. One feedback per token; resubmitting overwrites.
    An unknown token returns 404.
@@ -81,6 +83,19 @@ make typecheck      # tsc across every TS workspace
 After changing any API schema on the server, run `make generate-api` and commit the updated
 `lib/optimizer-protocol/schema.json` and `src/generated/api.ts`.
 
+### Secrets
+
+Secrets go in `app/optimizer-server/config/dev-secrets.env`, which is gitignored (`*secrets.env`)
+and loaded after `dev.env`. The server runs without it, but then can't classify queries (they're
+routed as unclassified). Create it once per machine:
+
+```bash
+printf 'TYPESAFE_API_KEY=%s\n' "<key>" > app/optimizer-server/config/dev-secrets.env
+```
+
+On the optimizer VM, write the same file at `~/searchhacks/app/optimizer-server/config/dev-secrets.env`
+(e.g. over ssh). `make deploy` never touches it.
+
 ### Make targets
 
 | Target | What it does |
@@ -93,7 +108,7 @@ After changing any API schema on the server, run `make generate-api` and commit 
 | `make migrate` | Apply Django migrations to the local dev DB |
 | `make server` | Run the optimizer server locally with auto-reload (port 8000) |
 | `make ui` | Run the dashboard dev server (port 5173) |
-| `make mock-driver ARGS="..."` | Run the mock driver; `ARGS` go to the CLI (`--server`, `--n`, `--concurrency`) |
+| `make mock-driver ARGS="..."` | Run the mock driver; `ARGS` go to the CLI (`--server`, `--n`, `--concurrency`, `--seed`, `--categories`) |
 | `make bootstrap HOST=<vm>` | One-time, idempotent setup of a VM (see Deployment) |
 | `make deploy HOST=<vm>` | Pull `main` on a VM, sync deps, restart its enabled services |
 | `make enable HOST=<vm> UNIT=<unit>` | Enable + start a systemd service on a VM |
@@ -130,7 +145,8 @@ deploy/
 ```
 
 There is no prod config: the VMs run everything with the same committed `config/dev.json`
-(and `config/dev.env`) used locally, `DEBUG` included.
+(and `config/dev.env`) used locally, `DEBUG` included. The only per-VM file is the gitignored
+`config/dev-secrets.env` (see Secrets).
 
 ### One-time setup
 
@@ -173,7 +189,7 @@ On the driver VM, use `tmux` for long runs:
 
 ```bash
 cd ~/searchhacks
-npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz --n 5000 --concurrency 16
+npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz --n 5000 --concurrency 8 --seed 1
 ```
 
 ### Notes / open questions

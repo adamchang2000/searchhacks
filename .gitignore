@@ -21,3 +21,6 @@ dist/
 
 # Environment
 .env
+
+# Secrets (never commit; e.g. app/optimizer-server/config/dev-secrets.env)
+*secrets.env

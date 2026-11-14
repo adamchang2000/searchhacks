@@ -1,6 +1,7 @@
 export {
   SearchHacksClient,
   type SearchHacksClientOptions,
+  type SearchOptions,
   type SearchResponse,
 } from "./client.ts";
 export type { SearchProvider, SearchResult } from "./providers/types.ts";

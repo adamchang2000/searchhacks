@@ -114,6 +114,8 @@ export interface components {
             query: string;
             /** Available Providers */
             available_providers: string[];
+            /** Override Query Category */
+            override_query_category?: number | null;
         };
         /** SubmitFeedbackResponse */
         SubmitFeedbackResponse: {
@@ -148,6 +150,12 @@ export interface components {
             available_providers: string[];
             /** Provider */
             provider: string;
+            /** Category L1 */
+            category_l1: number | null;
+            /** Category L2 */
+            category_l2: number | null;
+            /** Category Source */
+            category_source: string;
             /** Is Good */
             is_good: boolean | null;
         };
