@@ -1,6 +1,10 @@
-import argparse, json, os, sqlite3
+import argparse
+import json
+import os
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+
 from dotenv import load_dotenv
 import uvicorn
 
@@ -19,8 +23,8 @@ def main():
     db_path = Path(__file__).resolve().parents[1] / "db.sqlite3"
     with sqlite3.connect(db_path) as db:
         try:
-            db.execute("UPDATE runs SET status=?, ended_at=? WHERE status IN (?, ?)",
-                       ("failed", datetime.now(timezone.utc).isoformat(), "running", "paused"))
+            db.execute("UPDATE sim_runs SET status=?, ended_at=? WHERE status IN (?, ?, ?)",
+                       ("failed", datetime.now(timezone.utc).isoformat(), "running", "paused", "stopping"))
         except sqlite3.OperationalError as exc:
             if "no such table" not in str(exc):
                 raise

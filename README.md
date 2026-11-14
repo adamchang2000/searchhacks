@@ -189,3 +189,13 @@ npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz 
 The driver VM runs a Python/Django control API at https://searchhacks-driver.exe.xyz/api/ and, from the optimizer VM, https://driver.int.exe.xyz/api/. It exposes GET /health, GET /runs, POST /runs to start a simulation, and POST /runs/{id}/pause, /resume, and /stop. Run records are stored in app/mock-driver-server/db.sqlite3 on the driver VM.
 
 Enable it with: make enable HOST=driver UNIT=searchhacks-mock-driver
+
+### Simulation bed
+
+The driver VM serves the simulation UI at https://searchhacks-driver.exe.xyz/simulation.
+Its Python backend stores scenarios, runs, and search events in SQLite. The default
+scenario has Shopping, Travel, and Computer Science queries with weighted traffic and
+provider success rates. Edit values in the UI, save, then start/pause/resume/stop a run.
+The worker calls only the optimizer's which_search and submit_feedback endpoints.
+The simulator's category is recorded with each event; the optimizer's current routing
+policy still aggregates feedback across categories.
