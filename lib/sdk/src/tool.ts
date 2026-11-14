@@ -7,8 +7,8 @@ import type { SearchHacksClient } from "./client.ts";
 export const webSearchToolDefinition = {
   name: "web_search",
   description:
-    "Search the web. Returns a list of results with title, url, and snippet, plus a search_id. " +
-    "After using the results, call web_search_feedback with the search_id and a 0-1 usefulness score.",
+    "Search the web. Returns a list of results with title, url, and snippet, plus a feedback_token. " +
+    "After using the results, call web_search_feedback with the feedback_token and whether the results were good.",
   input_schema: {
     type: "object",
     properties: {
@@ -20,15 +20,14 @@ export const webSearchToolDefinition = {
 
 export const webSearchFeedbackToolDefinition = {
   name: "web_search_feedback",
-  description: "Rate how useful a previous web_search was, from 0 (useless) to 1 (exactly what was needed).",
+  description: "Report whether a previous web_search returned good results.",
   input_schema: {
     type: "object",
     properties: {
-      search_id: { type: "string" },
-      score: { type: "number", minimum: 0, maximum: 1 },
-      comment: { type: "string" },
+      feedback_token: { type: "string" },
+      is_good: { type: "boolean" },
     },
-    required: ["search_id", "score"],
+    required: ["feedback_token", "is_good"],
   },
 } as const;
 
@@ -41,14 +40,10 @@ export async function handleToolCall(
   switch (name) {
     case webSearchToolDefinition.name: {
       const res = await client.search(String(input.query));
-      return { search_id: res.searchId, results: res.results };
+      return { feedback_token: res.feedbackToken, results: res.results };
     }
     case webSearchFeedbackToolDefinition.name: {
-      await client.feedback(
-        String(input.search_id),
-        Number(input.score),
-        input.comment === undefined ? undefined : String(input.comment),
-      );
+      await client.submitFeedback(String(input.feedback_token), Boolean(input.is_good));
       return { ok: true };
     }
     default:

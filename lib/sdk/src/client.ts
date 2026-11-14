@@ -9,29 +9,26 @@ export interface SearchHacksClientOptions {
   optimizerUrl: string;
   /** Providers this client can dispatch to. The optimizer picks among them. */
   providers: SearchProvider[];
-  /** Free-form info attached to every routed search (client name, session id, ...). */
-  clientMetadata?: Record<string, unknown>;
 }
 
 export interface SearchResponse {
-  /** Pass this back to `feedback()`. */
-  searchId: string;
+  /** Pass this back to `submitFeedback()`. */
+  feedbackToken: string;
   provider: string;
   results: SearchResult[];
 }
 
 /**
  * The SDK's core loop:
- *   1. ask the optimizer which provider to use for this query
+ *   1. which_search: ask the optimizer which provider to use for this query
  *   2. dispatch the query to that provider
- *   3. report the outcome (latency, result count, error) back to the optimizer
- * The caller later reports result quality via `feedback()`.
+ * The caller later reports result quality via `submitFeedback()`.
  */
 export class SearchHacksClient {
   private readonly api: OptimizerClient;
   private readonly providers: Map<string, SearchProvider>;
 
-  constructor(private readonly options: SearchHacksClientOptions) {
+  constructor(options: SearchHacksClientOptions) {
     if (options.providers.length === 0) {
       throw new Error("SearchHacksClient requires at least one provider");
     }
@@ -40,54 +37,29 @@ export class SearchHacksClient {
   }
 
   async search(query: string): Promise<SearchResponse> {
-    const { data: route, error: routeError } = await this.api.POST(
-      "/api/searches/route",
-      {
-        body: {
-          query,
-          available_providers: [...this.providers.keys()],
-          client_metadata: this.options.clientMetadata ?? {},
-        },
-      },
-    );
-    if (!route) {
-      throw new Error(`optimizer route failed: ${JSON.stringify(routeError)}`);
-    }
-
-    const provider = this.providers.get(route.provider);
-    if (!provider) {
-      throw new Error(`optimizer chose unknown provider: ${route.provider}`);
-    }
-
-    const start = performance.now();
-    let results: SearchResult[] = [];
-    let error: string | null = null;
-    try {
-      results = await provider.search(query);
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
-    }
-    const latencyMs = performance.now() - start;
-
-    await this.api.POST("/api/searches/{search_id}/outcome", {
-      params: { path: { search_id: route.search_id } },
-      body: { latency_ms: latencyMs, num_results: results.length, error },
+    const { data, error } = await this.api.POST("/api/which_search", {
+      body: { query, available_providers: [...this.providers.keys()] },
     });
-
-    if (error !== null) {
-      throw new Error(`provider ${provider.name} failed: ${error}`);
+    if (!data) {
+      throw new Error(`which_search failed: ${JSON.stringify(error)}`);
     }
-    return { searchId: route.search_id, provider: provider.name, results };
+
+    const provider = this.providers.get(data.provider);
+    if (!provider) {
+      throw new Error(`optimizer chose unknown provider: ${data.provider}`);
+    }
+
+    const results = await provider.search(query);
+    return { feedbackToken: data.feedback_token, provider: provider.name, results };
   }
 
-  /** Report result quality for a previous search. `score` is in [0, 1]. */
-  async feedback(searchId: string, score: number, comment?: string): Promise<void> {
-    const { error } = await this.api.POST("/api/searches/{search_id}/feedback", {
-      params: { path: { search_id: searchId } },
-      body: { score, comment: comment ?? null },
+  /** Report whether a previous search's results were good. */
+  async submitFeedback(feedbackToken: string, isGood: boolean): Promise<void> {
+    const { error } = await this.api.POST("/api/submit_feedback", {
+      body: { feedback_token: feedbackToken, is_good: isGood },
     });
     if (error) {
-      throw new Error(`optimizer feedback failed: ${JSON.stringify(error)}`);
+      throw new Error(`submit_feedback failed: ${JSON.stringify(error)}`);
     }
   }
 }

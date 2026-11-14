@@ -24,13 +24,11 @@ const providers = new Map(defaultMockProviders.map((p) => [p.name, p]));
 const client = new SearchHacksClient({
   optimizerUrl: values.server!,
   providers: defaultMockProviders,
-  clientMetadata: { client: "mock-driver" },
 });
 
-/** Synthetic feedback: the provider's hidden quality plus noise, clamped to [0, 1]. */
-function scoreFor(provider: MockProvider): number {
-  const noise = (Math.random() - 0.5) * 0.3;
-  return Math.min(1, Math.max(0, provider.trueQuality + noise));
+/** Synthetic feedback: results are "good" with probability equal to the provider's hidden quality. */
+function isGood(provider: MockProvider): boolean {
+  return Math.random() < provider.trueQuality;
 }
 
 let issued = 0;
@@ -43,7 +41,7 @@ async function worker() {
     try {
       const res = await client.search(query);
       counts[res.provider] = (counts[res.provider] ?? 0) + 1;
-      await client.feedback(res.searchId, scoreFor(providers.get(res.provider)!));
+      await client.submitFeedback(res.feedbackToken, isGood(providers.get(res.provider)!));
     } catch (e) {
       console.warn(String(e));
     }

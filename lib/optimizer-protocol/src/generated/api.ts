@@ -21,7 +21,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/searches/route": {
+    "/api/which_search": {
         parameters: {
             query?: never;
             header?: never;
@@ -30,32 +30,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Route */
-        post: operations["optimizer_server_src_api_searches_route"];
+        /** Which Search */
+        post: operations["optimizer_server_src_api_optimizer_which_search"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/searches/{search_id}/outcome": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Report Outcome */
-        post: operations["optimizer_server_src_api_searches_report_outcome"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/searches/{search_id}/feedback": {
+    "/api/submit_feedback": {
         parameters: {
             query?: never;
             header?: never;
@@ -65,7 +48,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Submit Feedback */
-        post: operations["optimizer_server_src_api_searches_submit_feedback"];
+        post: operations["optimizer_server_src_api_optimizer_submit_feedback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -115,59 +98,37 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** RouteResponse */
-        RouteResponse: {
-            /**
-             * Search Id
-             * Format: uuid
-             */
-            search_id: string;
+        /** WhichSearchResponse */
+        WhichSearchResponse: {
             /** Provider */
             provider: string;
+            /**
+             * Feedback Token
+             * Format: uuid
+             */
+            feedback_token: string;
         };
-        /** RouteRequest */
-        RouteRequest: {
+        /** WhichSearchRequest */
+        WhichSearchRequest: {
             /** Query */
             query: string;
             /** Available Providers */
             available_providers: string[];
-            /** Client Metadata */
-            client_metadata?: {
-                [key: string]: unknown;
-            };
         };
-        /** OkResponse */
-        OkResponse: {
+        /** SubmitFeedbackResponse */
+        SubmitFeedbackResponse: {
             /** Ok */
             ok: boolean;
         };
-        /** OutcomeRequest */
-        OutcomeRequest: {
-            /** Latency Ms */
-            latency_ms: number;
-            /** Num Results */
-            num_results: number;
-            /** Error */
-            error?: string | null;
-        };
-        /** FeedbackRequest */
-        FeedbackRequest: {
-            /** Score */
-            score: number;
-            /** Comment */
-            comment?: string | null;
-        };
-        /** FeedbackOut */
-        FeedbackOut: {
-            /** Score */
-            score: number;
-            /** Comment */
-            comment: string | null;
+        /** SubmitFeedbackRequest */
+        SubmitFeedbackRequest: {
             /**
-             * Created At
-             * Format: date-time
+             * Feedback Token
+             * Format: uuid
              */
-            created_at: string;
+            feedback_token: string;
+            /** Is Good */
+            is_good: boolean;
         };
         /** SearchOut */
         SearchOut: {
@@ -187,18 +148,8 @@ export interface components {
             available_providers: string[];
             /** Provider */
             provider: string;
-            /** Client Metadata */
-            client_metadata: {
-                [key: string]: unknown;
-            };
-            /** Latency Ms */
-            latency_ms: number | null;
-            /** Num Results */
-            num_results: number | null;
-            /** Error */
-            error: string | null;
-            /** Feedback */
-            feedback: components["schemas"]["FeedbackOut"][];
+            /** Is Good */
+            is_good: boolean | null;
         };
         /** ProviderStatsOut */
         ProviderStatsOut: {
@@ -208,10 +159,10 @@ export interface components {
             num_searches: number;
             /** Num Feedback */
             num_feedback: number;
-            /** Mean Score */
-            mean_score: number | null;
-            /** Mean Latency Ms */
-            mean_latency_ms: number | null;
+            /** Num Good */
+            num_good: number;
+            /** Good Rate */
+            good_rate: number | null;
         };
     };
     responses: never;
@@ -242,7 +193,7 @@ export interface operations {
             };
         };
     };
-    optimizer_server_src_api_searches_route: {
+    optimizer_server_src_api_optimizer_which_search: {
         parameters: {
             query?: never;
             header?: never;
@@ -251,7 +202,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RouteRequest"];
+                "application/json": components["schemas"]["WhichSearchRequest"];
             };
         };
         responses: {
@@ -261,23 +212,21 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RouteResponse"];
+                    "application/json": components["schemas"]["WhichSearchResponse"];
                 };
             };
         };
     };
-    optimizer_server_src_api_searches_report_outcome: {
+    optimizer_server_src_api_optimizer_submit_feedback: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                search_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["OutcomeRequest"];
+                "application/json": components["schemas"]["SubmitFeedbackRequest"];
             };
         };
         responses: {
@@ -287,33 +236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OkResponse"];
-                };
-            };
-        };
-    };
-    optimizer_server_src_api_searches_submit_feedback: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                search_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FeedbackRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OkResponse"];
+                    "application/json": components["schemas"]["SubmitFeedbackResponse"];
                 };
             };
         };

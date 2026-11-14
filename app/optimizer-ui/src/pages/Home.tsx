@@ -32,8 +32,8 @@ export function Home() {
               <th className="py-1">Provider</th>
               <th>Searches</th>
               <th>Feedback</th>
-              <th>Mean score</th>
-              <th>Mean latency (ms)</th>
+              <th>Good</th>
+              <th>Good rate</th>
             </tr>
           </thead>
           <tbody>
@@ -42,8 +42,8 @@ export function Home() {
                 <td className="py-1 font-mono">{s.provider}</td>
                 <td>{s.num_searches}</td>
                 <td>{s.num_feedback}</td>
-                <td>{fmt(s.mean_score)}</td>
-                <td>{fmt(s.mean_latency_ms, 0)}</td>
+                <td>{s.num_good}</td>
+                <td>{fmt(s.good_rate)}</td>
               </tr>
             ))}
           </tbody>
@@ -58,8 +58,7 @@ export function Home() {
               <th className="py-1">Time</th>
               <th>Query</th>
               <th>Provider</th>
-              <th>Results</th>
-              <th>Score</th>
+              <th>Feedback</th>
             </tr>
           </thead>
           <tbody>
@@ -68,8 +67,7 @@ export function Home() {
                 <td className="py-1">{new Date(s.created_at).toLocaleTimeString()}</td>
                 <td>{s.query}</td>
                 <td className="font-mono">{s.provider}</td>
-                <td>{s.error ? "error" : (s.num_results ?? "—")}</td>
-                <td>{fmt(s.feedback[0]?.score)}</td>
+                <td>{s.is_good == null ? "—" : s.is_good ? "good" : "bad"}</td>
               </tr>
             ))}
           </tbody>

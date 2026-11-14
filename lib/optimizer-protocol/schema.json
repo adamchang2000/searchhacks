@@ -25,10 +25,10 @@
         }
       }
     },
-    "/api/searches/route": {
+    "/api/which_search": {
       "post": {
-        "operationId": "optimizer_server_src_api_searches_route",
-        "summary": "Route",
+        "operationId": "optimizer_server_src_api_optimizer_which_search",
+        "summary": "Which Search",
         "parameters": [],
         "responses": {
           "200": {
@@ -36,20 +36,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RouteResponse"
+                  "$ref": "#/components/schemas/WhichSearchResponse"
                 }
               }
             }
           }
         },
         "tags": [
-          "searches"
+          "optimizer"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RouteRequest"
+                "$ref": "#/components/schemas/WhichSearchRequest"
               }
             }
           },
@@ -57,85 +57,31 @@
         }
       }
     },
-    "/api/searches/{search_id}/outcome": {
+    "/api/submit_feedback": {
       "post": {
-        "operationId": "optimizer_server_src_api_searches_report_outcome",
-        "summary": "Report Outcome",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "search_id",
-            "schema": {
-              "format": "uuid",
-              "title": "Search Id",
-              "type": "string"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OkResponse"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "searches"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OutcomeRequest"
-              }
-            }
-          },
-          "required": true
-        }
-      }
-    },
-    "/api/searches/{search_id}/feedback": {
-      "post": {
-        "operationId": "optimizer_server_src_api_searches_submit_feedback",
+        "operationId": "optimizer_server_src_api_optimizer_submit_feedback",
         "summary": "Submit Feedback",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "search_id",
-            "schema": {
-              "format": "uuid",
-              "title": "Search Id",
-              "type": "string"
-            },
-            "required": true
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponse"
+                  "$ref": "#/components/schemas/SubmitFeedbackResponse"
                 }
               }
             }
           }
         },
         "tags": [
-          "searches"
+          "optimizer"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FeedbackRequest"
+                "$ref": "#/components/schemas/SubmitFeedbackRequest"
               }
             }
           },
@@ -176,7 +122,7 @@
           }
         },
         "tags": [
-          "searches"
+          "dashboard"
         ]
       }
     },
@@ -202,7 +148,7 @@
           }
         },
         "tags": [
-          "stats"
+          "dashboard"
         ]
       }
     }
@@ -222,26 +168,26 @@
         "title": "HealthResponse",
         "type": "object"
       },
-      "RouteResponse": {
+      "WhichSearchResponse": {
         "properties": {
-          "search_id": {
-            "format": "uuid",
-            "title": "Search Id",
-            "type": "string"
-          },
           "provider": {
             "title": "Provider",
+            "type": "string"
+          },
+          "feedback_token": {
+            "format": "uuid",
+            "title": "Feedback Token",
             "type": "string"
           }
         },
         "required": [
-          "search_id",
-          "provider"
+          "provider",
+          "feedback_token"
         ],
-        "title": "RouteResponse",
+        "title": "WhichSearchResponse",
         "type": "object"
       },
-      "RouteRequest": {
+      "WhichSearchRequest": {
         "properties": {
           "query": {
             "title": "Query",
@@ -254,21 +200,16 @@
             "minItems": 1,
             "title": "Available Providers",
             "type": "array"
-          },
-          "client_metadata": {
-            "additionalProperties": true,
-            "title": "Client Metadata",
-            "type": "object"
           }
         },
         "required": [
           "query",
           "available_providers"
         ],
-        "title": "RouteRequest",
+        "title": "WhichSearchRequest",
         "type": "object"
       },
-      "OkResponse": {
+      "SubmitFeedbackResponse": {
         "properties": {
           "ok": {
             "title": "Ok",
@@ -278,93 +219,26 @@
         "required": [
           "ok"
         ],
-        "title": "OkResponse",
+        "title": "SubmitFeedbackResponse",
         "type": "object"
       },
-      "OutcomeRequest": {
+      "SubmitFeedbackRequest": {
         "properties": {
-          "latency_ms": {
-            "title": "Latency Ms",
-            "type": "number"
-          },
-          "num_results": {
-            "title": "Num Results",
-            "type": "integer"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          }
-        },
-        "required": [
-          "latency_ms",
-          "num_results"
-        ],
-        "title": "OutcomeRequest",
-        "type": "object"
-      },
-      "FeedbackRequest": {
-        "properties": {
-          "score": {
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Score",
-            "type": "number"
-          },
-          "comment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comment"
-          }
-        },
-        "required": [
-          "score"
-        ],
-        "title": "FeedbackRequest",
-        "type": "object"
-      },
-      "FeedbackOut": {
-        "properties": {
-          "score": {
-            "title": "Score",
-            "type": "number"
-          },
-          "comment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comment"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
+          "feedback_token": {
+            "format": "uuid",
+            "title": "Feedback Token",
             "type": "string"
+          },
+          "is_good": {
+            "title": "Is Good",
+            "type": "boolean"
           }
         },
         "required": [
-          "score",
-          "comment",
-          "created_at"
+          "feedback_token",
+          "is_good"
         ],
-        "title": "FeedbackOut",
+        "title": "SubmitFeedbackRequest",
         "type": "object"
       },
       "SearchOut": {
@@ -394,50 +268,16 @@
             "title": "Provider",
             "type": "string"
           },
-          "client_metadata": {
-            "additionalProperties": true,
-            "title": "Client Metadata",
-            "type": "object"
-          },
-          "latency_ms": {
+          "is_good": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "boolean"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Latency Ms"
-          },
-          "num_results": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Num Results"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "feedback": {
-            "items": {
-              "$ref": "#/components/schemas/FeedbackOut"
-            },
-            "title": "Feedback",
-            "type": "array"
+            "title": "Is Good"
           }
         },
         "required": [
@@ -446,11 +286,7 @@
           "query",
           "available_providers",
           "provider",
-          "client_metadata",
-          "latency_ms",
-          "num_results",
-          "error",
-          "feedback"
+          "is_good"
         ],
         "title": "SearchOut",
         "type": "object"
@@ -469,18 +305,11 @@
             "title": "Num Feedback",
             "type": "integer"
           },
-          "mean_score": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mean Score"
+          "num_good": {
+            "title": "Num Good",
+            "type": "integer"
           },
-          "mean_latency_ms": {
+          "good_rate": {
             "anyOf": [
               {
                 "type": "number"
@@ -489,15 +318,15 @@
                 "type": "null"
               }
             ],
-            "title": "Mean Latency Ms"
+            "title": "Good Rate"
           }
         },
         "required": [
           "provider",
           "num_searches",
           "num_feedback",
-          "mean_score",
-          "mean_latency_ms"
+          "num_good",
+          "good_rate"
         ],
         "title": "ProviderStatsOut",
         "type": "object"

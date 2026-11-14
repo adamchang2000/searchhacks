@@ -5,9 +5,12 @@ export { createOptimizerClient, type OptimizerClient } from "./client.ts";
 
 type Schemas = components["schemas"];
 
-export type RouteRequest = Schemas["RouteRequest"];
-export type RouteResponse = Schemas["RouteResponse"];
-export type OutcomeRequest = Schemas["OutcomeRequest"];
-export type FeedbackRequest = Schemas["FeedbackRequest"];
+// Protocol
+export type WhichSearchRequest = Schemas["WhichSearchRequest"];
+export type WhichSearchResponse = Schemas["WhichSearchResponse"];
+export type SubmitFeedbackRequest = Schemas["SubmitFeedbackRequest"];
+export type SubmitFeedbackResponse = Schemas["SubmitFeedbackResponse"];
+
+// Dashboard
 export type SearchOut = Schemas["SearchOut"];
 export type ProviderStatsOut = Schemas["ProviderStatsOut"];

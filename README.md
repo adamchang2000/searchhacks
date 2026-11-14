@@ -48,14 +48,22 @@ in telem properly. this is so we can generate real traces for the demo
     └── chatbot/                  # TODO
 ```
 
-Protocol flow (SDK ↔ optimizer server):
+Optimizer protocol (SDK / drivers ↔ optimizer server):
 
-1. `POST /api/searches/route` `{query, available_providers}` → `{search_id, provider}`
-2. SDK dispatches the query to `provider`
-3. `POST /api/searches/{search_id}/outcome` `{latency_ms, num_results, error}`
-4. `POST /api/searches/{search_id}/feedback` `{score ∈ [0,1], comment}` (from the chatbot)
+| Endpoint | Request | Response |
+|---|---|---|
+| `POST /api/which_search` | `{query, available_providers: string[]}` | `{provider, feedback_token}` |
+| `POST /api/submit_feedback` | `{feedback_token, is_good: bool}` | `{ok}` |
 
-Dashboard reads `GET /api/searches` and `GET /api/stats/providers`.
+1. The caller sends the query and the providers it can dispatch to. The optimizer picks one and
+   returns an opaque `feedback_token` linking later feedback to this call.
+2. The caller dispatches the query to `provider` itself.
+3. The caller reports `is_good` with that token. One feedback per token; resubmitting overwrites.
+   An unknown token returns 404.
+
+`is_good` is a placeholder until we decide what feedback really is.
+
+Dashboard (read-only): `GET /api/searches`, `GET /api/stats/providers`.
 
 ## Development
 

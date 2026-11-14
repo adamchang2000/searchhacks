@@ -1,7 +1,7 @@
 """Routing policy: pick which search provider a query should go to.
 
-Starts as epsilon-greedy over mean feedback score per provider. This is the piece
-we'll iterate on (per-query features, contextual bandits, cost/latency tradeoffs, ...).
+Starts as epsilon-greedy over each provider's fraction of `is_good` feedback. This is the
+piece we'll iterate on (per-query features, contextual bandits, cost/latency tradeoffs, ...).
 """
 
 import random
@@ -16,8 +16,11 @@ class ProviderStats:
     provider: str
     num_searches: int
     num_feedback: int
-    mean_score: float | None
-    mean_latency_ms: float | None
+    num_good: int
+
+    @property
+    def good_rate(self) -> float | None:
+        return self.num_good / self.num_feedback if self.num_feedback else None
 
 
 def choose_provider(
@@ -37,5 +40,5 @@ def choose_provider(
     if random.random() < EPSILON:
         return random.choice(available_providers)
 
-    # Exploit: best mean feedback score.
-    return max(available_providers, key=lambda p: stats[p].mean_score or 0.0)
+    # Exploit: highest fraction of good feedback.
+    return max(available_providers, key=lambda p: stats[p].good_rate or 0.0)
