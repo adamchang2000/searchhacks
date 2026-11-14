@@ -1,0 +1,12 @@
+# Mock driver control API; enable with make enable HOST=driver UNIT=searchhacks-mock-driver
+[Unit]
+Description=SearchHacks mock driver backend
+After=network.target
+[Service]
+User=exedev
+WorkingDirectory=/home/exedev/searchhacks/app/mock-driver-server
+ExecStart=/usr/local/bin/uv run mock-driver-server --config config/dev.json --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=2
+[Install]
+WantedBy=multi-user.target

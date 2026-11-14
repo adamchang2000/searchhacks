@@ -1,9 +1,10 @@
-.PHONY: all install generate-api typecheck check-types server ui mock-driver migrate
+.PHONY: all install generate-api typecheck check-types server ui mock-driver driver-server migrate
 
 all: generate-api
 
 install:
 	cd app/optimizer-server && uv sync
+	cd app/mock-driver-server && uv sync
 	npm install
 
 # Export the OpenAPI schema from the optimizer server and regenerate TS types.
@@ -28,6 +29,9 @@ ui:
 
 mock-driver:
 	npm start -w @searchhacks/mock-driver -- $(ARGS)
+
+driver-server:
+	cd app/mock-driver-server && uv run mock-driver-server --config config/dev.json --host 0.0.0.0 --port 8000
 
 # ---- Deployment (see README "Deployment") ----
 # Every VM target acts on exactly one VM, chosen with a required HOST=<vm>.

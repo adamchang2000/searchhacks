@@ -183,3 +183,9 @@ npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz 
   doing anything destructive.
 - The dashboard (`app/optimizer-ui`) isn't deployed yet. Run it locally, or build it and serve
   the static files from the optimizer VM.
+
+### Mock-driver backend
+
+The driver VM runs a Python/Django control API at https://searchhacks-driver.exe.xyz/api/ and, from the optimizer VM, https://driver.int.exe.xyz/api/. It exposes GET /health, GET /runs, POST /runs to start a simulation, and POST /runs/{id}/pause, /resume, and /stop. Run records are stored in app/mock-driver-server/db.sqlite3 on the driver VM.
+
+Enable it with: make enable HOST=driver UNIT=searchhacks-mock-driver
