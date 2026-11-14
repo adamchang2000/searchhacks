@@ -29,6 +29,8 @@ class ProviderPosteriorOut(Schema):
 class SnapshotOut(Schema):
     id: int
     created_at: datetime
+    # Written by POST /api/admin/reset-search-distribution: uniform, counting starts afresh.
+    is_reset: bool
     by_provider: Dict[str, ProviderPosteriorOut]
 
 
@@ -51,14 +53,18 @@ def _rows(ids, **cell):
 @router.get("/history", response=DistributionHistoryOut)
 def history(request, l1: Optional[int] = None, max_points: int = 240):
     """Evenly thinned to at most `max_points` snapshots; the latest is always included."""
-    snaps = list(SearchDistribution.objects.order_by("id").values_list("id", "created_at"))
+    snaps = list(
+        SearchDistribution.objects.order_by("id").values_list("id", "created_at", "is_reset")
+    )
     if len(snaps) > max_points > 1:
         step = (len(snaps) - 1) / (max_points - 1)
         snaps = [snaps[round(i * step)] for i in range(max_points)]
-    rows = _rows([i for i, _ in snaps], category_l1=l1, category_l2__isnull=True)
+    rows = _rows([i for i, _, _ in snaps], category_l1=l1, category_l2__isnull=True)
     return {
         "l1": l1,
-        "snapshots": [{"id": i, "created_at": t, "by_provider": rows[i]} for i, t in snaps],
+        "snapshots": [
+            {"id": i, "created_at": t, "is_reset": r, "by_provider": rows[i]} for i, t, r in snaps
+        ],
     }
 
 

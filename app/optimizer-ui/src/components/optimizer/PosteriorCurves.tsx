@@ -24,13 +24,22 @@ export function PosteriorCurves({ byProvider, colors }: Props) {
 
   const providers = orderProviders(Object.keys(byProvider), colors);
   const curves = providers.map((p) => ({ p, ...byProvider[p], c: curve(byProvider[p].alpha, byProvider[p].beta) }));
-  const yMax = Math.max(1, ...curves.flatMap((c) => c.c.pdf));
+  // Headroom above the tallest curve, so a flat Beta(1, 1) (after a reset) reads as a line at
+  // density 1 rather than filling the whole plot.
+  const yMax = Math.max(1, ...curves.flatMap((c) => c.c.pdf)) * 1.25;
 
   const w = Math.max(200, width);
   const iw = w - M.left - M.right;
   const ih = HEIGHT - M.top - M.bottom;
   const x = (v: number) => M.left + v * iw;
   const y = (d: number) => M.top + (1 - d / yMax) * ih;
+
+  // Overlapping fills add up; keep the combined tint light however many curves there are.
+  const fillOpacity = Math.min(0.1, 0.3 / Math.max(1, curves.length));
+  // After a reset (or before any feedback) every curve is identical; say so instead of
+  // leaving the reader to wonder why only one line shows.
+  const allSame =
+    curves.length > 1 && curves.every((c) => c.alpha === curves[0].alpha && c.beta === curves[0].beta);
 
   // Draw the most-picked provider last so it sits on top.
   const drawOrder = [...curves].sort((a, b) => a.p_best - b.p_best);
@@ -70,11 +79,26 @@ export function PosteriorCurves({ byProvider, colors }: Props) {
               const col = colors.color(colors.keyOf(c.p));
               return (
                 <g key={c.p} opacity={dim ? 0.15 : 1}>
-                  <path d={`M${x(0)},${y(0)}L${line(c)}L${x(1)},${y(0)}Z`} fill={col} fillOpacity={0.1} />
+                  <path d={`M${x(0)},${y(0)}L${line(c)}L${x(1)},${y(0)}Z`} fill={col} fillOpacity={fillOpacity} />
                   <path d={`M${line(c)}`} fill="none" stroke={col} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
                 </g>
               );
             })}
+            {allSame && focus == null && (
+              <text
+                x={x(0.5)}
+                y={y(curves[0].c.pdf[Math.floor(curves[0].c.pdf.length / 2)]) - 10}
+                textAnchor="middle"
+                fontSize={12}
+                fill="var(--text-secondary)"
+                paintOrder="stroke"
+                stroke="var(--surface-1)"
+                strokeWidth={3}
+              >
+                All {curves.length} providers share this curve: Beta({+curves[0].alpha.toFixed(1)}, {+curves[0].beta.toFixed(1)})
+                {curves[0].alpha === 1 && curves[0].beta === 1 ? ", the uniform prior" : ""}
+              </text>
+            )}
             {hoverX != null && <line x1={x(hoverX)} x2={x(hoverX)} y1={M.top} y2={M.top + ih} stroke="var(--text-muted)" />}
           </svg>
         )}

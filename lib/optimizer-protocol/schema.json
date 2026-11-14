@@ -867,6 +867,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "is_reset": {
+            "title": "Is Reset",
+            "type": "boolean"
+          },
           "by_provider": {
             "additionalProperties": {
               "$ref": "#/components/schemas/ProviderPosteriorOut"
@@ -878,6 +882,7 @@
         "required": [
           "id",
           "created_at",
+          "is_reset",
           "by_provider"
         ],
         "title": "SnapshotOut",

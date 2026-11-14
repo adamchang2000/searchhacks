@@ -377,6 +377,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Is Reset */
+            is_reset: boolean;
             /** By Provider */
             by_provider: {
                 [key: string]: components["schemas"]["ProviderPosteriorOut"];

@@ -163,6 +163,8 @@ export function Optimizer() {
               Snapshot {index + 1} of {snapshots.length}
               {snap && ` · ${clock(snap.created_at, true)} · ${int(nFeedback)} feedback in this cell`}
               {live ? " · following latest" : ""}
+              {snap?.is_reset &&
+                " · Reset: every provider is at the uniform prior, so routing is uniform until new feedback arrives"}
               {history.isError && " · can't reach the server, showing the last data received"}
             </div>
           </div>

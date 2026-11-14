@@ -31,7 +31,7 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
       share[k] = (share[k] ?? 0) + v.p_best;
       n += v.n_obs;
     }
-    return { share, n, at: s.created_at };
+    return { share, n, at: s.created_at, reset: s.is_reset };
   });
   const keys = [...colors.series, ...(rows.some((r) => r.share[OTHER]) ? [OTHER] : [])].filter((k) =>
     rows.some((r) => (r.share[k] ?? 0) > 0),
@@ -48,18 +48,23 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
   const edges: number[][] = [rows.map(() => 0)];
   for (const k of keys) edges.push(rows.map((r, i) => edges[edges.length - 1][i] + (r.share[k] ?? 0)));
 
-  const band = (j: number) => {
-    const top = edges[j + 1].map((v, i) => `${x(i)},${y(v)}`);
-    const bottom = edges[j].map((v, i) => `${x(i)},${y(v)}`).reverse();
-    return `M${top.join("L")}L${bottom.join("L")}Z`;
-  };
+  // A reset is a jump, not a drift: hold the previous shares up to the reset snapshot, then
+  // drop straight down to it (a vertical step instead of a slope across the gap).
+  const pts = (col: number[]) =>
+    col.flatMap((v, i) =>
+      rows[i].reset && i > 0 ? [`${x(i)},${y(col[i - 1])}`, `${x(i)},${y(v)}`] : [`${x(i)},${y(v)}`],
+    );
+  const band = (j: number) => `M${pts(edges[j + 1]).join("L")}L${pts(edges[j]).reverse().join("L")}Z`;
+  const resets = rows.flatMap((r, i) => (r.reset ? [i] : []));
 
   const indexAt = (clientX: number, el: SVGSVGElement) => {
     const px = clientX - el.getBoundingClientRect().left;
     return Math.round(Math.min(1, Math.max(0, (px - M.left) / iw)) * last);
   };
 
-  const timeTicks = rows.length < 2 ? [] : [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * last));
+  // Deduped: with only a few snapshots, the quartiles round to the same index.
+  const timeTicks =
+    rows.length < 2 ? [] : [...new Set([0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * last)))];
   const h = hover != null ? rows[hover] : null;
 
   return (
@@ -89,6 +94,32 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
           ))}
           {keys.map((k, j) => (
             <path key={k} d={band(j)} fill={colors.color(k)} stroke="var(--surface-1)" strokeWidth={2} strokeLinejoin="round" />
+          ))}
+          {resets.map((i) => (
+            <g key={`reset-${i}`}>
+              <line
+                x1={x(i)}
+                x2={x(i)}
+                y1={M.top}
+                y2={M.top + ih}
+                stroke="var(--text-primary)"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+              />
+              <text
+                x={x(i) - 4}
+                y={M.top + 12}
+                textAnchor="end"
+                fontSize={11}
+                fontWeight={600}
+                fill="var(--text-primary)"
+                paintOrder="stroke"
+                stroke="var(--surface-1)"
+                strokeWidth={3}
+              >
+                Reset
+              </text>
+            </g>
           ))}
           {timeTicks.map((i, n) => (
             <text
@@ -122,6 +153,7 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
           <div className="text-secondary mb-1">
             {clock(h.at, true)} · {int(h.n)} feedback
           </div>
+          {h.reset && <div className="mb-1 font-medium">Reset: uniform, counting starts afresh</div>}
           {[...keys].reverse().map((k) => (
             <div key={k} className="flex items-center gap-2 py-px">
               <span className="inline-block h-0.5 w-3 rounded" style={{ background: colors.color(k) }} />
