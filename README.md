@@ -65,10 +65,30 @@ make migrate
 make server         # http://localhost:8000, API docs at /api/docs
 make ui             # http://localhost:5173
 make mock-driver ARGS="--n 500 --concurrency 8"
+make typecheck      # tsc across every TS workspace
 ```
 
 After changing any API schema on the server, run `make generate-api` and commit the updated
 `lib/optimizer-protocol/schema.json` and `src/generated/api.ts`.
+
+### Make targets
+
+| Target | What it does |
+|---|---|
+| `make` / `make all` | Same as `make generate-api` |
+| `make install` | `uv sync` the optimizer server + `npm install` all workspaces |
+| `make generate-api` | Export the OpenAPI schema from the server, regenerate TS types in `lib/optimizer-protocol` |
+| `make typecheck` | Typecheck every TS workspace |
+| `make migrate` | Apply Django migrations to the local dev DB |
+| `make server` | Run the optimizer server locally with auto-reload (port 8000) |
+| `make ui` | Run the dashboard dev server (port 5173) |
+| `make mock-driver ARGS="..."` | Run the mock driver; `ARGS` go to the CLI (`--server`, `--n`, `--concurrency`) |
+| `make bootstrap HOST=<vm>` | One-time, idempotent setup of a VM (see Deployment) |
+| `make deploy HOST=<vm>` | Pull `main` on a VM, sync deps, restart its enabled services |
+| `make enable HOST=<vm> UNIT=<unit>` | Enable + start a systemd service on a VM |
+| `make logs HOST=<vm> UNIT=<unit>` | Tail a service's logs on a VM |
+
+`<vm>` is `optimizer` or `driver` and is **required**: VM targets act on exactly one VM at a time.
 
 ## Deployment
 
@@ -106,8 +126,9 @@ That file stays on the VM and is gitignored.
 From your laptop, after the repo is pushed to `main`:
 
 ```bash
-make bootstrap                                          # both VMs, identical
-make enable HOST=optimizer UNIT=searchhacks-optimizer   # optimizer VM only
+make bootstrap HOST=optimizer
+make bootstrap HOST=driver
+make enable HOST=optimizer UNIT=searchhacks-optimizer
 ```
 
 Check from the driver VM:
@@ -124,7 +145,8 @@ To browse the API docs yourself (exe.dev login required), point the public proxy
 Push to `main`, then:
 
 ```bash
-make deploy                                            # update.sh on every VM
+make deploy HOST=optimizer                             # update.sh on the optimizer VM
+make deploy HOST=driver                                # update.sh on the driver VM
 make logs HOST=optimizer UNIT=searchhacks-optimizer    # tail logs
 ```
 
@@ -132,7 +154,7 @@ make logs HOST=optimizer UNIT=searchhacks-optimizer    # tail logs
 
 1. Put the app in `app/<name>/` with its own `pyproject.toml`. `update.sh` picks it up automatically.
 2. Add `deploy/systemd/searchhacks-<name>.service`, listening on `0.0.0.0:8000`.
-3. `make deploy && make enable HOST=driver UNIT=searchhacks-<name>`.
+3. `make deploy HOST=driver && make enable HOST=driver UNIT=searchhacks-<name>`.
 
 ### Running the mock driver
 
@@ -145,8 +167,8 @@ npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz 
 
 ### Notes / open questions
 
-- If the GitHub repo is private, each VM needs a read-only deploy key or `gh auth login`
-  before `make bootstrap`.
+- The VMs clone the repo anonymously over HTTPS, which only works because the repo is public.
+  If it goes private again, each VM needs a read-only deploy key or `gh auth login`.
 - SQLite lives at `app/optimizer-server/db.sqlite3` on the optimizer VM. Back it up before
   doing anything destructive.
 - The dashboard (`app/optimizer-ui`) isn't deployed yet. Run it locally, or build it and serve

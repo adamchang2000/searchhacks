@@ -26,22 +26,32 @@ mock-driver:
 	npm start -w @searchhacks/mock-driver -- $(ARGS)
 
 # ---- Deployment (see README "Deployment") ----
-HOSTS ?= searchhacks-optimizer.exe.xyz searchhacks-driver.exe.xyz
+# Every VM target acts on exactly one VM, chosen with a required HOST=<vm>.
+VMS := optimizer driver
+VM = searchhacks-$(HOST).exe.xyz
+require_host = $(if $(and $(filter 1,$(words $(HOST))),$(filter $(VMS),$(HOST))),,$(error HOST is required and must be one of: $(VMS), e.g. make $@ HOST=optimizer))
+require_unit = $(if $(UNIT),,$(error UNIT is required, e.g. make $@ HOST=optimizer UNIT=searchhacks-optimizer))
 
 .PHONY: bootstrap deploy enable logs
 
-# One-time (idempotent) setup of every VM: uv, node, clone, sync.
+# One-time (idempotent) setup of a VM: uv, node, clone, sync.
 bootstrap:
-	for h in $(HOSTS); do echo "== $$h"; ssh $$h 'bash -s' < deploy/bootstrap.sh || exit 1; done
+	$(require_host)
+	ssh $(VM) 'bash -s' < deploy/bootstrap.sh
 
-# Pull latest main on every VM, sync deps, restart enabled searchhacks-* services.
+# Pull latest main on a VM, sync deps, restart its enabled searchhacks-* services.
 deploy:
-	for h in $(HOSTS); do echo "== $$h"; ssh $$h '~/searchhacks/deploy/update.sh' || exit 1; done
+	$(require_host)
+	ssh $(VM) '~/searchhacks/deploy/update.sh'
 
-# Enable + start a service on one VM, e.g.  make enable HOST=optimizer UNIT=searchhacks-optimizer
+# Enable + start a service on a VM.
 enable:
-	ssh searchhacks-$(HOST).exe.xyz 'sudo systemctl enable --now $(UNIT)'
+	$(require_host)
+	$(require_unit)
+	ssh $(VM) 'sudo systemctl enable --now $(UNIT)'
 
-# Tail a service's logs, e.g.  make logs HOST=optimizer UNIT=searchhacks-optimizer
+# Tail a service's logs on a VM.
 logs:
-	ssh searchhacks-$(HOST).exe.xyz 'journalctl -u $(UNIT) -f -n 100'
+	$(require_host)
+	$(require_unit)
+	ssh $(VM) 'journalctl -u $(UNIT) -f -n 100'
