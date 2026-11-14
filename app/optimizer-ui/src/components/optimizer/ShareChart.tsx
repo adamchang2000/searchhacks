@@ -102,9 +102,10 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
                 x2={x(i)}
                 y1={M.top}
                 y2={M.top + ih}
-                stroke="var(--text-primary)"
-                strokeWidth={1.5}
-                strokeDasharray="4 3"
+                stroke="var(--reset-marker)"
+                strokeWidth={2}
+                strokeDasharray="0.5 4"
+                strokeLinecap="round"
               />
               <text
                 x={x(i) - 4}
@@ -112,7 +113,7 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
                 textAnchor="end"
                 fontSize={11}
                 fontWeight={600}
-                fill="var(--text-primary)"
+                fill="var(--reset-marker)"
                 paintOrder="stroke"
                 stroke="var(--surface-1)"
                 strokeWidth={3}

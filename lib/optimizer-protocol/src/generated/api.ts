@@ -123,7 +123,8 @@ export interface paths {
         };
         /**
          * History
-         * @description Evenly thinned to at most `max_points` snapshots; the latest is always included.
+         * @description Evenly thinned to at most `max_points` snapshots. The latest and every reset snapshot are
+         *     always included (the dashboard replays from the last reset).
          */
         get: operations["optimizer_server_src_api_ui_distribution_history"];
         put?: never;

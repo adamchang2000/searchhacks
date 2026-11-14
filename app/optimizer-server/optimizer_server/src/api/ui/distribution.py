@@ -52,13 +52,16 @@ def _rows(ids, **cell):
 
 @router.get("/history", response=DistributionHistoryOut)
 def history(request, l1: Optional[int] = None, max_points: int = 240):
-    """Evenly thinned to at most `max_points` snapshots; the latest is always included."""
+    """Evenly thinned to at most `max_points` snapshots. The latest and every reset snapshot are
+    always included (the dashboard replays from the last reset)."""
     snaps = list(
         SearchDistribution.objects.order_by("id").values_list("id", "created_at", "is_reset")
     )
     if len(snaps) > max_points > 1:
         step = (len(snaps) - 1) / (max_points - 1)
-        snaps = [snaps[round(i * step)] for i in range(max_points)]
+        keep = {round(i * step) for i in range(max_points)}
+        keep |= {i for i, s in enumerate(snaps) if s[2]}
+        snaps = [snaps[i] for i in sorted(keep)]
     rows = _rows([i for i, _, _ in snaps], category_l1=l1, category_l2__isnull=True)
     return {
         "l1": l1,

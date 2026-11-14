@@ -316,7 +316,7 @@
             }
           }
         },
-        "description": "Evenly thinned to at most `max_points` snapshots; the latest is always included.",
+        "description": "Evenly thinned to at most `max_points` snapshots. The latest and every reset snapshot are\nalways included (the dashboard replays from the last reset).",
         "tags": [
           "ui"
         ]

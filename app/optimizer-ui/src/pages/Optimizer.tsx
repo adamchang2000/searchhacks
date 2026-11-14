@@ -8,8 +8,9 @@ import { PosteriorCurves } from "@/components/optimizer/PosteriorCurves";
 import { CategoryHeatmap, categoryLabel } from "@/components/optimizer/CategoryHeatmap";
 import { orderProviders } from "@/components/optimizer/types";
 
-const PLAY_MS = 8000; // a full replay takes about this long
-const TICK_MS = 80;
+const PLAY_MS = 8000; // a long replay takes about this long
+const TICK_MS = 80; // fastest frame
+const MAX_FRAME_MS = 700; // slowest frame, so a short replay (few snapshots) is still watchable
 
 export function Optimizer() {
   const colors = useProviderColors();
@@ -17,6 +18,8 @@ export function Optimizer() {
   // Snapshot the scrubber is on; null follows the latest one live.
   const [pinned, setPinned] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  // Index the current replay started from; the step size spreads the replay over PLAY_MS.
+  const [playFrom, setPlayFrom] = useState(0);
 
   const history = useQuery({
     queryKey: ["distribution", "history", l1],
@@ -40,6 +43,10 @@ export function Optimizer() {
   }
   const snap = snapshots[index];
   const live = pinned == null;
+  let lastReset = -1;
+  snapshots.forEach((s, i) => {
+    if (s.is_reset) lastReset = i;
+  });
 
   const select = (i: number) => {
     setPlaying(false);
@@ -48,20 +55,32 @@ export function Optimizer() {
 
   useEffect(() => {
     if (!playing || snapshots.length < 2) return;
-    const step = Math.max(1, Math.round(snapshots.length / (PLAY_MS / TICK_MS)));
+    const frames = Math.max(1, last - playFrom);
+    const step = Math.max(1, Math.round(frames / (PLAY_MS / TICK_MS)));
+    const frameMs = Math.min(MAX_FRAME_MS, Math.max(TICK_MS, PLAY_MS / frames));
     const t = setTimeout(() => {
       const next = index + step;
       if (next >= last) {
         setPinned(null);
         setPlaying(false);
       } else setPinned(snapshots[next].id);
-    }, TICK_MS);
+    }, frameMs);
     return () => clearTimeout(t);
-  }, [playing, index, last, snapshots]);
+  }, [playing, index, last, snapshots, playFrom]);
 
   const play = () => {
     if (playing) return setPlaying(false);
+    const from = index >= last ? 0 : index;
     if (index >= last && snapshots.length) setPinned(snapshots[0].id);
+    setPlayFrom(from);
+    setPlaying(true);
+  };
+
+  // Replay only what happened after the most recent reset.
+  const playSinceReset = () => {
+    if (lastReset < 0 || lastReset >= last) return;
+    setPinned(snapshots[lastReset].id);
+    setPlayFrom(lastReset);
     setPlaying(true);
   };
 
@@ -143,6 +162,20 @@ export function Optimizer() {
               <button className="control w-20" onClick={play} aria-label={playing ? "Pause replay" : "Replay from the start"}>
                 {playing ? "❚❚ Pause" : "▶ Play"}
               </button>
+              {lastReset >= 0 && (
+                <button
+                  className="control whitespace-nowrap disabled:opacity-40"
+                  onClick={playSinceReset}
+                  disabled={lastReset >= last}
+                  title={
+                    lastReset >= last
+                      ? "No snapshots since the last reset yet"
+                      : `Replay from the reset at ${clock(snapshots[lastReset].created_at, true)}`
+                  }
+                >
+                  ▶ Play since last reset
+                </button>
+              )}
               <input
                 type="range"
                 className="flex-1"
