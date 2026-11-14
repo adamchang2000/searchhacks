@@ -2,12 +2,12 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SearchHacks · Simulation</title><link rel="stylesheet" href="/assets/shared.css"><style>.success-slider{display:flex;align-items:center;gap:10px;min-width:120px}.success-slider input[type=range]{width:100%;min-width:65px;padding:0;accent-color:#2563eb;cursor:pointer;border:0;box-shadow:none}.success-slider output{min-width:35px;text-align:right;font-variant-numeric:tabular-nums;color:#475467;font-size:12px}.outcome-filters{display:flex;gap:14px;margin-bottom:14px}.outcome-filters label{flex:1}.outcome-filters select{display:block;margin-top:6px;width:100%;padding:8px;border:1px solid #dde3eb;border-radius:6px;background:white;color:#263245}.outcome-row{padding:10px 0;border-bottom:1px solid #edf0f4}.outcome-row label{font-size:12px;color:#475467}.outcome-row label input{width:auto}.outcome-row .success-slider{margin-top:8px}.success-slider output{min-width:52px}.qps-control{display:flex;align-items:center!important;gap:10px;margin-bottom:16px}.qps-control label{font-weight:600;font-size:12px}.qps-control input[type=range]{width:160px;padding:0;accent-color:#2563eb}.qps-control output{min-width:28px;font-variant-numeric:tabular-nums}#draft-state{margin-left:auto;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.config-save{display:flex;gap:8px;margin-bottom:12px}.config-save input{min-width:0;flex:1}.config-save button{white-space:nowrap}.saved-config{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #edf0f4}.saved-config strong{font-size:12px}#category-search{margin-bottom:8px}.category-weight{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f2f5}.weight-ring{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:conic-gradient(#5986ce var(--turn),#eef1f5 0);display:grid;place-items:center}.weight-ring b{background:white;width:29px;height:29px;display:grid;place-items:center;border-radius:50%;font-size:11px;font-weight:500}.category-weight-content{flex:1;min-width:0}.category-weight-content label{display:block;font-size:12px;color:#475467;margin-bottom:5px}.weight-dial{padding:0;accent-color:#5986ce;width:100%}#category-count{margin-bottom:8px}
 .chart-title{flex-wrap:wrap;gap:8px}.chart-title>div:first-child{flex:1;min-width:240px}.chart-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.chart-filters select{font:inherit;font-size:11px;padding:4px 6px;border:1px solid #e0e5ec;border-radius:5px;background:white;color:#475467}.chart-filters span{font-size:10px;color:#8a95a4}#legend{flex-wrap:wrap;max-width:55%;justify-content:flex-end;gap:5px 12px}.chart-panel{min-height:205px}#chart{min-height:90px}.saved-config{gap:12px}.config-description{font-size:11px;color:#7b8797;line-height:1.45;margin:5px 0;max-width:420px}.saved-config button{flex-shrink:0}</style></head><body><main>
-<header><h1>SearchHacks <span>/ simulation</span></h1><div class="controls"><button id="start" class="primary icon" aria-label="Start run" title="Start run"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="pause" class="icon" aria-label="Pause" title="Pause" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor"/></svg></button><button id="resume" class="primary icon" aria-label="Resume" title="Resume" hidden disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="stop" class="icon" aria-label="Stop" title="Stop" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button></div></header>
+<header><h1>SearchHacks <span>/ simulation</span></h1><div class="controls"><button id="reset-optimizer" title="Restart optimizer learning with uniform routing. Search history is kept.">Reset optimizer</button><button id="start" class="primary icon" aria-label="Start run" title="Start run"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="pause" class="icon" aria-label="Pause" title="Pause" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor"/></svg></button><button id="resume" class="primary icon" aria-label="Resume" title="Resume" hidden disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="stop" class="icon" aria-label="Stop" title="Stop" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button></div></header>
 <div class="stats"><div class="stat"><span>Status</span><b id="status">Idle</b></div><div class="stat"><span>Issued</span><b id="issued">0</b></div><div class="stat"><span>Completed</span><b id="completed">0</b></div><div class="stat"><span>Errors</span><b id="errors">0</b></div><span id="runid"></span></div>
 <div class="workspace">
-<section class="panel"><div class="panel-head"><nav class="tabs" aria-label="Simulation settings"><button class="tab selected" data-tab="configs-pane">Configs</button><button class="tab" data-tab="success">Provider outcomes</button><button class="tab" data-tab="queries-pane">Category mix</button></nav></div><div class="pane-body">
+<section class="panel"><div class="panel-head"><nav class="tabs" aria-label="Simulation settings"><button class="tab selected" data-tab="configs-pane">Presets</button><button class="tab" data-tab="success">Provider outcomes</button><button class="tab" data-tab="queries-pane">Category mix</button></nav></div><div class="pane-body">
 <div class="traffic qps-control"><label for="rate">QPS</label><input id="rate" type="range" min=".1" max="30" step=".1" aria-label="Queries per second"><output id="qps-output">2</output><span id="draft-state" class="muted"></span></div>
-<div class="tab-pane" id="configs-pane"><div class="config-save"><input id="config-name" maxlength="80" placeholder="Name this config" aria-label="New config name"><button id="save-config">Save as new</button></div><input id="config-description" placeholder="Short description (optional)" maxlength="400" aria-label="Config description" style="margin-bottom:10px"><p class="help" id="config-summary">Load a saved configuration, or tweak settings and save a new one.</p><div id="saved-configs"></div></div>
+<div class="tab-pane" id="configs-pane"><p class="help">Start with a demo preset, then adjust it live. Changes apply immediately.</p><div id="saved-configs"></div></div>
 <div class="tab-pane" id="success" hidden><p class="help">Observed outcome probabilities for each provider and category. Unchecked fields stay unknown. Follow-up cessation is sampled at the end of each synthetic 3-query session. Changes apply live, including while paused.</p><div style="overflow:auto"><div id="rates-table"></div></div></div>
 <div class="tab-pane" id="queries-pane" hidden><p class="help">Higher weights produce more traffic. Zero turns a category off. Queries are pregenerated.</p><input id="category-search" type="search" placeholder="Find a category…" aria-label="Find a category"><small id="category-count"></small><div id="categories"></div></div>
 </div></section>
@@ -16,7 +16,7 @@
 <section class="panel chart-panel"><div class="chart-title"><div><h2>Observed outcomes</h2><p>Success rate since last settings change · one dot per submission · last 60s</p><div class="chart-filters"><select id="chart-outcome" aria-label="Chart outcome"><option value="purchase_conversion">Purchase conversion</option><option value="user_confirmed_outcome">User confirmed outcome</option><option value="user_stopped_following_up">Stopped following up</option></select><select id="chart-category" aria-label="Chart category"></select><span>Settings apply live · hover for sample counts and targets</span></div></div><div id="legend"></div></div><svg id="chart" viewBox="0 0 1100 145" preserveAspectRatio="none" role="img" aria-label="Observed outcome success rate by provider, from zero to one hundred percent"></svg></section>
 </main><div id="message" role="status"></div><script>
 const OUTCOMES={purchase_conversion:'Purchase conversion',user_confirmed_outcome:'User confirmed outcome',user_stopped_following_up:'Stopped following up (>1 query)'};
-let config, run, latestEvents=[];let selectedProvider, selectedCategory;let catalog=[],dirty=false,loadedName='Unsaved config',currentStatus='idle';let liveTimer,liveSequence=0;
+let config, run, latestEvents=[];let selectedProvider, selectedCategory;let catalog=[],dirty=false,loadedName='Current settings',currentStatus='idle';let liveTimer,liveSequence=0;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function request(path,method,body){let r=await fetch(path,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});let j=await r.json();if(!r.ok)throw Error(j.detail||JSON.stringify(j));return j}
@@ -43,14 +43,14 @@ function renderOutcomeEditor(){
  document.querySelectorAll('.outcome-enabled').forEach(box=>box.onchange=()=>{const input=box.closest('.outcome-row').querySelector('.rate-input');if(box.checked)rates[box.dataset.field]=Number(input.value)/100;else delete rates[box.dataset.field];markDirty();renderOutcomeEditor()});
 }
 
-function updateDraftLabel(){$('draft-state').textContent=loadedName+(dirty?' · edited':'')}
+function updateDraftLabel(){$('draft-state').textContent=loadedName+(dirty?' · customized':'')}
 function markDirty(){dirty=true;updateDraftLabel();scheduleLiveUpdate()}
 function scheduleLiveUpdate(){
  clearTimeout(liveTimer);
- if(run&&['running','paused'].includes(currentStatus))liveTimer=setTimeout(()=>applyLiveConfig().catch(e=>message('Settings not applied: '+e.message)),250);
+ liveTimer=setTimeout(()=>applyLiveConfig().catch(e=>message('Settings not applied: '+e.message)),250);
 }
 async function applyLiveConfig(){
- if(!run||!['running','paused'].includes(currentStatus))return;
+ if(!run||!['running','paused'].includes(currentStatus)){await request('/api/sim/scenario','PUT',collect());return}
  const sequence=++liveSequence;
  await request('/api/sim/runs/'+run+'/config','PATCH',{config:collect()});
  if(sequence===liveSequence){$('draft-state').textContent=loadedName+' · live';await renderChart()}
@@ -69,15 +69,22 @@ function renderCategories(){
  });
 }
 function collect(){return {...structuredClone(config),total_queries:null,rate_per_second:Number($('rate').value)}}
-async function renderSavedConfigs(){
- const items=await request('/api/sim/configs');
- $('saved-configs').innerHTML=items.map(c=>'<div class="saved-config"><div><strong>'+esc(c.name)+'</strong><p class="config-description">'+esc(c.description||'')+'</p><small>'+esc(new Date(c.created_at).toLocaleString())+'</small></div><button data-config="'+c.id+'">Load</button></div>').join('');
- document.querySelectorAll('[data-config]').forEach(button=>button.onclick=async()=>{try{const item=await request('/api/sim/configs/'+button.dataset.config);config=item.config;config.total_queries=null;loadedName=item.name;dirty=false;renderConfig();await applyLiveConfig();message('Loaded '+item.name+(['running','paused'].includes(currentStatus)?' · applied live':''))}catch(e){message(e.message)}});
+
+async function renderPresets(){
+ const items=await request('/api/sim/presets');
+ $('saved-configs').innerHTML=items.map(c=>'<div class="saved-config"><div><strong>'+esc(c.name)+'</strong><p class="config-description">'+esc(c.description)+'</p></div><button data-preset="'+c.id+'">Load</button></div>').join('');
+ document.querySelectorAll('[data-preset]').forEach(button=>button.onclick=async()=>{try{
+   clearTimeout(liveTimer);const item=items.find(c=>c.id===button.dataset.preset);
+   config=structuredClone(item.config);loadedName=item.name;dirty=false;renderConfig();
+   await applyLiveConfig();message('Loaded '+item.name+(['running','paused'].includes(currentStatus)?' · applied live':''));
+ }catch(e){message(e.message)}});
 }
-async function saveNewConfig(){
- const name=$('config-name').value.trim();if(!name){message('Give the config a name');return}
- await request('/api/sim/configs','POST',{name,description:$('config-description').value.trim(),config:collect()});loadedName=name;dirty=false;updateDraftLabel();$('config-name').value='';$('config-description').value='';await renderSavedConfigs();message('Saved '+name);
-}
+$('reset-optimizer').onclick=async()=>{
+ const button=$('reset-optimizer');button.disabled=true;button.textContent='Resetting…';button.setAttribute('aria-busy','true');
+ try{await request('/api/sim/optimizer/reset','POST');message('Optimizer reset. Uniform routing; learning starts from new searches.')}
+ catch(e){message(e.message)}
+ finally{button.disabled=false;button.textContent='Reset optimizer';button.removeAttribute('aria-busy')}
+};
 async function action(a){try{if(a==='start'){let x=await request('/api/sim/runs','POST',{config:collect()});run=x.id}else await request('/api/sim/runs/'+run+'/'+a,'POST');await refresh()}catch(e){message(e.message)}}
 function renderEvents(){
  let cats={};config.categories.forEach(c=>cats[c.id]=c.label);
@@ -88,13 +95,12 @@ function renderEvents(){
 }
 async function refresh(){try{let list=await request('/api/sim/runs');let current=run?list.find(x=>x.id===run):list[0];if(!current)return;run=current.id;currentStatus=current.status;$('start').hidden=current.status==='paused';$('resume').hidden=current.status!=='paused';$('status').textContent=current.status;$('issued').textContent=current.issued;$('completed').textContent=current.completed;$('errors').textContent=current.errors;$('runid').textContent='Run '+run;$('start').disabled=['running','paused','stopping'].includes(current.status);$('pause').disabled=current.status!=='running';$('resume').disabled=current.status!=='paused';$('stop').disabled=!['running','paused'].includes(current.status);latestEvents=await request('/api/sim/events?run_id='+run);renderEvents();await renderChart()}catch(e){message(e.message)}}
 
-$('save-config').onclick=()=>saveNewConfig().catch(e=>message(e.message));
 $('rate').oninput=()=>{config.rate_per_second=Number($('rate').value);$('qps-output').value=$('rate').value;markDirty()};
 $('category-search').oninput=renderCategories;
 ['start','pause','resume','stop'].forEach(a=>$(a).onclick=()=>action(a));
 (async()=>{try{
  [config,catalog]=await Promise.all([request('/api/sim/scenario'),request('/api/sim/categories')]);
- config.total_queries=null;renderConfig();await renderSavedConfigs();await refresh();setInterval(refresh,1500);
+ config.total_queries=null;renderConfig();await renderPresets();await refresh();setInterval(refresh,1500);
 }catch(e){message(e.message)}})();
 
 document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{if(button.dataset.tab==='success')renderOutcomeEditor();document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===button));document.querySelectorAll('.tab-pane').forEach(p=>p.hidden=p.id!==button.dataset.tab)});

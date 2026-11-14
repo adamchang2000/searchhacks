@@ -244,9 +244,9 @@ Latent goodness is simulator diagnostic data; it is not sent as optimizer feedba
 
 ### Simulation configs and traffic
 
-The first Simulation tab lists saved configs. Load one to restore its settings, or
-name and save a new snapshot after editing. Existing saved snapshots are never overwritten.
-Traffic has one QPS slider and runs continuously until paused or stopped. Changes apply
-to the next run. Category mix lists all 1,132 non-root Google Trends categories, with
+The first Simulation tab lists four built-in demo presets. Load a preset, then tweak
+QPS, category weights and outcome probabilities live. There is no saved-config workflow.
+Traffic runs continuously until paused or stopped. The Reset optimizer button restarts
+learning from uniform routing using only new searches, while preserving search history. Category mix lists all 1,132 non-root Google Trends categories, with
 search and weights from 0 (disabled) to 100. Each category has a pregenerated three-query
 corpus in query_corpus.json; query text appears only in the live feed.

@@ -1,7 +1,4 @@
-"""Seed reproducible demo scenarios without replacing saved configs.
-
-Run from app/mock-driver-server: uv run python -m mock_driver_server.demo_configs
-"""
+"""Built-in demonstration presets for the simulation UI."""
 import json
 from pathlib import Path
 
@@ -53,28 +50,3 @@ def demo_configs(providers):
             category: {"exa": (.85, .95, .8)} for category in (18, 67, 1227)
         }),
     ]
-
-
-def main():
-    import os
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mock_driver_server.settings")
-    import django
-    django.setup()
-    from uuid import uuid4
-    from mock_driver_server.sim import PROVIDERS, db, now, validate
-    with db() as conn:
-        names = {row["name"] for row in conn.execute("SELECT name FROM saved_sim_configs")}
-        for item in demo_configs(PROVIDERS):
-            validate(item["config"])
-            if item["name"] not in names:
-                conn.execute("INSERT INTO saved_sim_configs (id,name,created_at,body,description) VALUES (?,?,?,?,?)",
-                             (str(uuid4()), item["name"], now(), json.dumps(item["config"]), item["description"]))
-                print("Created: " + item["name"])
-            else:
-                conn.execute("UPDATE saved_sim_configs SET description=? WHERE name=? AND description=''",
-                             (item["description"], item["name"]))
-                print("Updated description: " + item["name"])
-
-
-if __name__ == "__main__":
-    main()

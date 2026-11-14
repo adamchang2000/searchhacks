@@ -74,17 +74,6 @@ def db():
     if "outcome_probabilities" not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
         conn.execute("ALTER TABLE sim_events ADD COLUMN outcome_probabilities TEXT")
     conn.execute("INSERT OR IGNORE INTO sim_config VALUES (1, ?)", (json.dumps(DEFAULT),))
-    conn.execute("""CREATE TABLE IF NOT EXISTS saved_sim_configs (
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL)""")
-    if "description" not in {row["name"] for row in conn.execute("PRAGMA table_info(saved_sim_configs)")}:
-        conn.execute("ALTER TABLE saved_sim_configs ADD COLUMN description TEXT NOT NULL DEFAULT ''")
-    conn.execute("UPDATE saved_sim_configs SET description=? WHERE name=? AND description=''",
-                 ("A simple mix of shopping, travel, and computer science queries to get started.", "Starter config"))
-    if not conn.execute("SELECT 1 FROM saved_sim_configs LIMIT 1").fetchone():
-        initial = normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"]))
-        initial["total_queries"] = None
-        conn.execute("INSERT INTO saved_sim_configs (id,name,created_at,body) VALUES (?,?,?,?)",
-                     (str(uuid4()), "Starter config", now(), json.dumps(initial)))
     try:
         with conn:
             yield conn
@@ -233,6 +222,7 @@ def start(request):
             raise HttpError(409, "A run is already active")
         payload = json.loads(request.body) if request.body else {}
         config = validate(normalize(payload["config"])) if "config" in payload else validate(normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"])))
+        conn.execute("UPDATE sim_config SET body=? WHERE id=1", (json.dumps(config),))
         run_id = str(uuid4())
         conn.execute("INSERT INTO sim_runs (id,created_at,status,config) VALUES (?,?,?,?)",
                      (run_id, now(), "running", json.dumps(config)))
@@ -258,6 +248,7 @@ def update_run_config(request, run_id: UUID):
         )
         if not result.rowcount:
             raise HttpError(409, "Run is no longer active")
+        conn.execute("UPDATE sim_config SET body=? WHERE id=1", (json.dumps(config),))
         revision = conn.execute("SELECT config_revision FROM sim_runs WHERE id=?", (str(run_id),)).fetchone()["config_revision"]
     with _lock:
         control = _active.get(str(run_id))
@@ -345,35 +336,15 @@ def timeseries(request, run_id: UUID, outcome: str = "purchase_conversion", cate
 def category_catalog(request):
     return json.loads(Path(__file__).with_name("query_corpus.json").read_text())
 
-@router.get("/configs")
-def saved_configs(request):
-    with db() as conn:
-        return [dict(row) for row in conn.execute("SELECT id,name,created_at,description FROM saved_sim_configs ORDER BY created_at DESC")]
+@router.get("/presets")
+def presets(request):
+    from mock_driver_server.demo_configs import demo_configs
+    return [{"id": str(index), **item} for index, item in enumerate(demo_configs(PROVIDERS))]
 
-@router.get("/configs/{config_id}")
-def load_config(request, config_id: UUID):
-    with db() as conn:
-        row = conn.execute("SELECT * FROM saved_sim_configs WHERE id=?", (str(config_id),)).fetchone()
-    if row is None:
-        raise HttpError(404, "Config not found")
-    return {**dict(row), "config": normalize(json.loads(row["body"])), "body": None}
 
-@router.post("/configs")
-def save_config(request):
+@router.post("/optimizer/reset")
+def reset_optimizer(request):
     try:
-        payload = json.loads(request.body)
-        name = payload["name"].strip()
-        if not name or len(name) > 80:
-            raise ValueError("Name must be between 1 and 80 characters")
-        config = validate(normalize(payload["config"]))
-        description = payload.get("description", "").strip()
-        if len(description) > 400:
-            raise ValueError("Description must be at most 400 characters")
-        if not description:
-            description = str(config["rate_per_second"]) + " QPS across " + str(sum(c["weight"] > 0 for c in config["categories"])) + " categories and " + str(len(config["providers"])) + " providers."
-    except (ValueError, KeyError, TypeError, AttributeError) as exc:
-        raise HttpError(400, str(exc))
-    key = str(uuid4())
-    with db() as conn:
-        conn.execute("INSERT INTO saved_sim_configs (id,name,created_at,body,description) VALUES (?,?,?,?,?)", (key, name, now(), json.dumps(config), description))
-    return {"id": key, "name": name}
+        return call("/api/admin/reset-search-distribution", {})
+    except Exception as exc:
+        raise HttpError(502, "Optimizer reset failed: " + str(exc)[:300])
