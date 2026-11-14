@@ -239,3 +239,12 @@ goodness >= 1-p. This correlates outcomes while preserving their marginal probab
 Cessation is sampled at the end of each synthetic three-query session. The chart plots
 successful feedback submissions by time and latent goodness, with outcome fields on hover.
 Latent goodness is simulator diagnostic data; it is not sent as optimizer feedback.
+
+### Simulation configs and traffic
+
+The first Simulation tab lists saved configs. Load one to restore its settings, or
+name and save a new snapshot after editing. Existing saved snapshots are never overwritten.
+Traffic has one QPS slider and runs continuously until paused or stopped. Changes apply
+to the next run. Category mix lists all 1,132 non-root Google Trends categories, with
+search and weights from 0 (disabled) to 100. Each category has a pregenerated three-query
+corpus in query_corpus.json; query text appears only in the live feed.

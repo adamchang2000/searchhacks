@@ -1,4 +1,5 @@
 import json
+import itertools
 import random
 import sqlite3
 import threading
@@ -65,6 +66,13 @@ def db():
         if column not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
             conn.execute("ALTER TABLE sim_events ADD COLUMN " + column + " " + kind)
     conn.execute("INSERT OR IGNORE INTO sim_config VALUES (1, ?)", (json.dumps(DEFAULT),))
+    conn.execute("""CREATE TABLE IF NOT EXISTS saved_sim_configs (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL)""")
+    if not conn.execute("SELECT 1 FROM saved_sim_configs LIMIT 1").fetchone():
+        initial = normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"]))
+        initial["total_queries"] = None
+        conn.execute("INSERT INTO saved_sim_configs VALUES (?,?,?,?)",
+                     (str(uuid4()), "Starter config", now(), json.dumps(initial)))
     try:
         with conn:
             yield conn
@@ -87,7 +95,7 @@ def validate(config):
         providers = config["providers"]
         cats = config["categories"]
         rates = config["success_rates"]
-        if type(total) is not int or not 1 <= total <= 1000000:
+        if total is not None and (type(total) is not int or not 1 <= total <= 1000000):
             raise ValueError("total_queries must be 1 to 1000000")
         if type(rate) not in (int, float) or not 0.1 <= rate <= 100:
             raise ValueError("rate_per_second must be 0.1 to 100")
@@ -95,9 +103,11 @@ def validate(config):
             raise ValueError("providers must be a nonempty list of unique names")
         if not isinstance(cats, list) or not cats or len({c["id"] for c in cats}) != len(cats):
             raise ValueError("categories must have unique IDs")
+        if not any(c["weight"] > 0 for c in cats):
+            raise ValueError("Give at least one category a positive weight")
         for cat in cats:
-            if type(cat["id"]) is not int or type(cat["weight"]) not in (int, float) or cat["weight"] <= 0:
-                raise ValueError("category IDs and weights are invalid")
+            if type(cat["id"]) is not int or type(cat["weight"]) not in (int, float) or not 0 <= cat["weight"] <= 100:
+                raise ValueError("category IDs and weights must be valid (0 to 100)")
             if not isinstance(cat["label"], str) or not cat["label"].strip():
                 raise ValueError("category label is required")
             if not cat["queries"]:
@@ -125,14 +135,15 @@ def call(path, payload):
 def work(run_id, control):
     with db() as conn:
         config = normalize(json.loads(conn.execute("SELECT config FROM sim_runs WHERE id=?", (run_id,)).fetchone()["config"]))
-    categories = config["categories"]
+    categories = [c for c in config["categories"] if c["weight"] > 0]
     try:
-        for query_index in range(config["total_queries"]):
+        for query_index in (range(config["total_queries"]) if config["total_queries"] is not None else itertools.count()):
             while not control["resume"].wait(timeout=0.2):
                 if control["stop"].is_set():
                     break
             if control["stop"].is_set():
                 break
+            started = time.monotonic()
             category = random.choices(categories, weights=[c["weight"] for c in categories])[0]
             query = random.choices(category["queries"], weights=[q["weight"] for q in category["queries"]])[0]["text"]
             with db() as conn:
@@ -160,7 +171,7 @@ def work(run_id, control):
                              (run_id, now(), category["id"], query, provider, json.dumps(feedback), error, goodness, submitted_at))
                 conn.execute("UPDATE sim_runs SET completed=completed+1, errors=errors+? WHERE id=?",
                              (int(error is not None), run_id))
-            if control["stop"].wait(1 / config["rate_per_second"]):
+            if control["stop"].wait(max(0, 1 / config["rate_per_second"] - (time.monotonic() - started))):
                 break
         status = "stopped" if control["stop"].is_set() else "completed"
     except Exception:
@@ -193,7 +204,8 @@ def start(request):
     with db() as conn:
         if conn.execute("SELECT 1 FROM sim_runs WHERE status IN ('running','paused','stopping') LIMIT 1").fetchone():
             raise HttpError(409, "A run is already active")
-        config = validate(normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"])))
+        payload = json.loads(request.body) if request.body else {}
+        config = validate(normalize(payload["config"])) if "config" in payload else validate(normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"])))
         run_id = str(uuid4())
         conn.execute("INSERT INTO sim_runs (id,created_at,status,config) VALUES (?,?,?,?)",
                      (run_id, now(), "running", json.dumps(config)))
@@ -254,3 +266,36 @@ def timeseries(request, run_id: UUID):
                "feedback": json.loads(row["feedback"]),
                "timestamp": datetime.fromisoformat(row["feedback_submitted_at"]).timestamp()} for row in rows]
     return {"providers": sorted({p["provider"] for p in points}), "points": points, "start": start, "end": end}
+
+
+@router.get("/categories")
+def category_catalog(request):
+    return json.loads(Path(__file__).with_name("query_corpus.json").read_text())
+
+@router.get("/configs")
+def saved_configs(request):
+    with db() as conn:
+        return [dict(row) for row in conn.execute("SELECT id,name,created_at FROM saved_sim_configs ORDER BY created_at DESC")]
+
+@router.get("/configs/{config_id}")
+def load_config(request, config_id: UUID):
+    with db() as conn:
+        row = conn.execute("SELECT * FROM saved_sim_configs WHERE id=?", (str(config_id),)).fetchone()
+    if row is None:
+        raise HttpError(404, "Config not found")
+    return {**dict(row), "config": normalize(json.loads(row["body"])), "body": None}
+
+@router.post("/configs")
+def save_config(request):
+    try:
+        payload = json.loads(request.body)
+        name = payload["name"].strip()
+        if not name or len(name) > 80:
+            raise ValueError("Name must be between 1 and 80 characters")
+        config = validate(normalize(payload["config"]))
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise HttpError(400, str(exc))
+    key = str(uuid4())
+    with db() as conn:
+        conn.execute("INSERT INTO saved_sim_configs VALUES (?,?,?,?)", (key, name, now(), json.dumps(config)))
+    return {"id": key, "name": name}

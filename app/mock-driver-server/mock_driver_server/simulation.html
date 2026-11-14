@@ -1,36 +1,36 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SearchHacks · Simulation</title><link rel="stylesheet" href="/assets/shared.css"><style>.success-slider{display:flex;align-items:center;gap:10px;min-width:120px}.success-slider input[type=range]{width:100%;min-width:65px;padding:0;accent-color:#2563eb;cursor:pointer;border:0;box-shadow:none}.success-slider output{min-width:35px;text-align:right;font-variant-numeric:tabular-nums;color:#475467;font-size:12px}.outcome-filters{display:flex;gap:14px;margin-bottom:14px}.outcome-filters label{flex:1}.outcome-filters select{display:block;margin-top:6px;width:100%;padding:8px;border:1px solid #dde3eb;border-radius:6px;background:white;color:#263245}.outcome-row{padding:10px 0;border-bottom:1px solid #edf0f4}.outcome-row label{font-size:12px;color:#475467}.outcome-row label input{width:auto}.outcome-row .success-slider{margin-top:8px}.success-slider output{min-width:52px}</style></head><body><main>
-<header><h1>SearchHacks <span>/ simulation</span></h1><div class="controls"><button id="save">Save</button><button id="start" class="primary icon" aria-label="Start run" title="Start run"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="pause" class="icon" aria-label="Pause" title="Pause" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor"/></svg></button><button id="resume" class="primary icon" aria-label="Resume" title="Resume" hidden disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="stop" class="icon" aria-label="Stop" title="Stop" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button></div></header>
+<title>SearchHacks · Simulation</title><link rel="stylesheet" href="/assets/shared.css"><style>.success-slider{display:flex;align-items:center;gap:10px;min-width:120px}.success-slider input[type=range]{width:100%;min-width:65px;padding:0;accent-color:#2563eb;cursor:pointer;border:0;box-shadow:none}.success-slider output{min-width:35px;text-align:right;font-variant-numeric:tabular-nums;color:#475467;font-size:12px}.outcome-filters{display:flex;gap:14px;margin-bottom:14px}.outcome-filters label{flex:1}.outcome-filters select{display:block;margin-top:6px;width:100%;padding:8px;border:1px solid #dde3eb;border-radius:6px;background:white;color:#263245}.outcome-row{padding:10px 0;border-bottom:1px solid #edf0f4}.outcome-row label{font-size:12px;color:#475467}.outcome-row label input{width:auto}.outcome-row .success-slider{margin-top:8px}.success-slider output{min-width:52px}.qps-control{display:flex;align-items:center!important;gap:10px;margin-bottom:16px}.qps-control label{font-weight:600;font-size:12px}.qps-control input[type=range]{width:160px;padding:0;accent-color:#2563eb}.qps-control output{min-width:28px;font-variant-numeric:tabular-nums}#draft-state{margin-left:auto;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.config-save{display:flex;gap:8px;margin-bottom:12px}.config-save input{min-width:0;flex:1}.config-save button{white-space:nowrap}.saved-config{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #edf0f4}.saved-config strong{font-size:12px}#category-search{margin-bottom:8px}.category-weight{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f2f5}.weight-ring{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:conic-gradient(#5986ce var(--turn),#eef1f5 0);display:grid;place-items:center}.weight-ring b{background:white;width:29px;height:29px;display:grid;place-items:center;border-radius:50%;font-size:11px;font-weight:500}.category-weight-content{flex:1;min-width:0}.category-weight-content label{display:block;font-size:12px;color:#475467;margin-bottom:5px}.weight-dial{padding:0;accent-color:#5986ce;width:100%}#category-count{margin-bottom:8px}
+</style></head><body><main>
+<header><h1>SearchHacks <span>/ simulation</span></h1><div class="controls"><button id="start" class="primary icon" aria-label="Start run" title="Start run"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="pause" class="icon" aria-label="Pause" title="Pause" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor"/></svg></button><button id="resume" class="primary icon" aria-label="Resume" title="Resume" hidden disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="stop" class="icon" aria-label="Stop" title="Stop" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button></div></header>
 <div class="stats"><div class="stat"><span>Status</span><b id="status">Idle</b></div><div class="stat"><span>Issued</span><b id="issued">0</b></div><div class="stat"><span>Completed</span><b id="completed">0</b></div><div class="stat"><span>Errors</span><b id="errors">0</b></div><span id="runid"></span></div>
 <div class="workspace">
-<section class="panel"><div class="panel-head"><nav class="tabs" aria-label="Simulation settings"><button class="tab selected" data-tab="success">Provider success rates</button><button class="tab" data-tab="queries-pane">Query mix</button><button class="tab" data-tab="advanced-pane">JSON</button></nav></div><div class="pane-body">
-<div class="traffic"><label>Queries <input id="total" type="number" min="1" max="1000000"></label><label>Per second <input id="rate" type="number" min=".1" max="100" step=".1"></label></div>
-<div class="tab-pane" id="success"><p class="help">Observed outcome probabilities for each provider and category. Unchecked fields stay unknown. Follow-up cessation is sampled at the end of each synthetic 3-query session. Saved changes apply to the next run.</p><div style="overflow:auto"><div id="rates-table"></div></div></div>
-<div class="tab-pane" id="queries-pane" hidden><p class="help">Higher weights produce more traffic. Queries use one line each: query | weight.</p><div id="categories"></div></div>
-<div class="tab-pane" id="advanced-pane" hidden><p class="help">Add categories or providers, or import a scenario.</p><textarea id="advanced" spellcheck="false" aria-label="Scenario JSON"></textarea><button id="apply-json">Use JSON in form</button></div>
+<section class="panel"><div class="panel-head"><nav class="tabs" aria-label="Simulation settings"><button class="tab selected" data-tab="configs-pane">Configs</button><button class="tab" data-tab="success">Provider outcomes</button><button class="tab" data-tab="queries-pane">Category mix</button></nav></div><div class="pane-body">
+<div class="traffic qps-control"><label for="rate">QPS</label><input id="rate" type="range" min=".1" max="30" step=".1" aria-label="Queries per second"><output id="qps-output">2</output><span id="draft-state" class="muted"></span></div>
+<div class="tab-pane" id="configs-pane"><div class="config-save"><input id="config-name" maxlength="80" placeholder="Name this config" aria-label="New config name"><button id="save-config">Save as new</button></div><p class="help" id="config-summary">Load a saved configuration, or tweak settings and save a new one.</p><div id="saved-configs"></div></div>
+<div class="tab-pane" id="success" hidden><p class="help">Observed outcome probabilities for each provider and category. Unchecked fields stay unknown. Follow-up cessation is sampled at the end of each synthetic 3-query session. Changes apply when you start a new run.</p><div style="overflow:auto"><div id="rates-table"></div></div></div>
+<div class="tab-pane" id="queries-pane" hidden><p class="help">Higher weights produce more traffic. Zero turns a category off. Queries are pregenerated.</p><input id="category-search" type="search" placeholder="Find a category…" aria-label="Find a category"><small id="category-count"></small><div id="categories"></div></div>
 </div></section>
 <section class="panel"><div class="panel-head"><h2>Live queries</h2><span class="muted" id="event-count">0 recent</span></div><div class="scroll"><table class="feed"><thead><tr><th>Time</th><th>Category</th><th>Query</th><th>Provider</th><th>Feedback</th></tr></thead><tbody id="events"></tbody></table></div></section>
 </div>
 <section class="panel chart-panel"><div class="chart-title"><div><h2>Query activity</h2><p>Submitted feedback · latent goodness · last 60 seconds</p></div><div id="legend"></div></div><svg id="chart" viewBox="0 0 1100 145" preserveAspectRatio="none" role="img" aria-label="Submitted feedback goodness over time by provider"></svg></section>
 </main><div id="message" role="status"></div><script>
 const OUTCOMES={purchase_conversion:'Purchase conversion',user_confirmed_outcome:'User confirmed outcome',user_stopped_following_up:'Stopped following up (>1 query)'};
-let config, run, latestEvents=[];let selectedProvider, selectedCategory;
+let config, run, latestEvents=[];let selectedProvider, selectedCategory;let catalog=[],dirty=false,loadedName='Unsaved config',currentStatus='idle';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function request(path,method,body){let r=await fetch(path,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});let j=await r.json();if(!r.ok)throw Error(j.detail||JSON.stringify(j));return j}
 function message(s){$('message').textContent=s; if(s)setTimeout(()=>{if($('message').textContent===s)$('message').textContent=''},5000)}
 
 function renderConfig(){
- $('total').value=config.total_queries;$('rate').value=config.rate_per_second;
+ $('rate').value=config.rate_per_second;$('qps-output').value=config.rate_per_second;
 
  selectedProvider=config.providers.includes(selectedProvider)?selectedProvider:config.providers[0];
  selectedCategory=config.categories.some(c=>String(c.id)===String(selectedCategory))?selectedCategory:String(config.categories[0].id);
  renderOutcomeEditor();
 
- $('categories').innerHTML=config.categories.map((c,i)=>'<div class="cat" data-index="'+i+'"><div class="category-heading"><strong>'+esc(c.label)+'</strong><label>Traffic weight <input class="cat-weight" type="number" min=".01" step=".1" value="'+c.weight+'"></label></div><textarea class="queries" aria-label="'+esc(c.label)+' queries">'+esc(c.queries.map(q=>q.text+' | '+q.weight).join('\n'))+'</textarea></div>').join('');
+ renderCategories();updateDraftLabel();
 
- $('advanced').value=JSON.stringify(config,null,2);
 }
 
 function renderOutcomeEditor(){
@@ -39,17 +39,36 @@ function renderOutcomeEditor(){
  $('rates-table').outerHTML='<div id="rates-table"><div class="outcome-filters"><label>Search provider<select id="provider-filter">'+config.providers.map(p=>'<option '+(p===selectedProvider?'selected':'')+'>'+esc(p)+'</option>').join('')+'</select></label><label>Category<select id="category-filter">'+config.categories.map(c=>'<option value="'+c.id+'" '+(String(c.id)===String(selectedCategory)?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select></label></div>'+Object.entries(OUTCOMES).map(([field,label])=>{const value=rates[field];return '<div class="outcome-row"><label><input class="outcome-enabled" data-field="'+field+'" type="checkbox" '+(value!==undefined?'checked':'')+'> '+esc(label)+'</label><div class="success-slider"><input class="rate-input" data-field="'+field+'" type="range" min="0" max="100" value="'+Math.round((value??0.5)*100)+'" '+(value===undefined?'disabled':'')+' aria-label="'+esc(label)+'"><output>'+(value===undefined?'Unknown':Math.round(value*100)+'%')+'</output></div></div>'}).join('')+'</div>';
  $('provider-filter').onchange=e=>{selectedProvider=e.target.value;renderOutcomeEditor()};
  $('category-filter').onchange=e=>{selectedCategory=e.target.value;renderOutcomeEditor()};
- document.querySelectorAll('.rate-input').forEach(input=>input.oninput=()=>{rates[input.dataset.field]=Number(input.value)/100;input.nextElementSibling.value=input.value+'%'});
- document.querySelectorAll('.outcome-enabled').forEach(box=>box.onchange=()=>{const input=box.closest('.outcome-row').querySelector('.rate-input');if(box.checked)rates[box.dataset.field]=Number(input.value)/100;else delete rates[box.dataset.field];renderOutcomeEditor()});
+ document.querySelectorAll('.rate-input').forEach(input=>input.oninput=()=>{rates[input.dataset.field]=Number(input.value)/100;input.nextElementSibling.value=input.value+'%';markDirty()});
+ document.querySelectorAll('.outcome-enabled').forEach(box=>box.onchange=()=>{const input=box.closest('.outcome-row').querySelector('.rate-input');if(box.checked)rates[box.dataset.field]=Number(input.value)/100;else delete rates[box.dataset.field];markDirty();renderOutcomeEditor()});
 }
-function collect(){
- let next=structuredClone(config);next.total_queries=Number($('total').value);next.rate_per_second=Number($('rate').value);
- document.querySelectorAll('.cat').forEach(el=>{let c=next.categories[Number(el.dataset.index)];c.weight=Number(el.querySelector('.cat-weight').value);c.queries=el.querySelector('.queries').value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{let parts=s.split('|');return {text:parts[0].trim(),weight:Number(parts[1]||1)}})});
 
- return next;
+function updateDraftLabel(){$('draft-state').textContent=loadedName+(dirty?' · edited':'')}
+function markDirty(){dirty=true;updateDraftLabel()}
+function renderCategories(){
+ const query=$('category-search').value.toLowerCase();
+ const weights=new Map(config.categories.map(c=>[c.id,c.weight]));
+ const items=catalog.filter(c=>c.label.toLowerCase().includes(query));
+ $('category-count').textContent=items.length+' categories · '+config.categories.filter(c=>c.weight>0).length+' enabled';
+ $('categories').innerHTML=items.map(c=>{const w=weights.get(c.id)||0;return '<div class="category-weight"><span class="weight-ring" style="--turn:'+w*3.6+'deg"><b>'+w+'</b></span><div class="category-weight-content"><label for="weight-'+c.id+'">'+esc(c.label)+'</label><input id="weight-'+c.id+'" class="weight-dial" type="range" min="0" max="100" step="1" value="'+w+'" data-id="'+c.id+'" aria-label="'+esc(c.label)+' traffic weight"></div></div>'}).join('');
+ document.querySelectorAll('.weight-dial').forEach(input=>input.oninput=()=>{
+   const id=Number(input.dataset.id),weight=Number(input.value);let cat=config.categories.find(c=>c.id===id);
+   if(!cat){cat=structuredClone(catalog.find(c=>c.id===id));config.categories.push(cat);config.success_rates[id]=Object.fromEntries(config.providers.map(p=>[p,{user_confirmed_outcome:.5}]))}
+   cat.weight=weight;const ring=input.closest('.category-weight').querySelector('.weight-ring');ring.style.setProperty('--turn',weight*3.6+'deg');ring.querySelector('b').textContent=weight;
+   $('category-count').textContent=items.length+' categories · '+config.categories.filter(c=>c.weight>0).length+' enabled';markDirty();
+ });
 }
-async function save(){config=collect();await request('/api/sim/scenario','PUT',config);renderConfig();message('Scenario saved')}
-async function action(a){try{if(a==='start'){await save();let x=await request('/api/sim/runs','POST');run=x.id}else await request('/api/sim/runs/'+run+'/'+a,'POST');await refresh()}catch(e){message(e.message)}}
+function collect(){return {...structuredClone(config),total_queries:null,rate_per_second:Number($('rate').value)}}
+async function renderSavedConfigs(){
+ const items=await request('/api/sim/configs');
+ $('saved-configs').innerHTML=items.map(c=>'<div class="saved-config"><div><strong>'+esc(c.name)+'</strong><small>'+esc(new Date(c.created_at).toLocaleString())+'</small></div><button data-config="'+c.id+'">Load</button></div>').join('');
+ document.querySelectorAll('[data-config]').forEach(button=>button.onclick=async()=>{try{const item=await request('/api/sim/configs/'+button.dataset.config);config=item.config;config.total_queries=null;loadedName=item.name;dirty=false;renderConfig();message('Loaded '+item.name+(currentStatus==='running'||currentStatus==='paused'?' for the next run':''))}catch(e){message(e.message)}});
+}
+async function saveNewConfig(){
+ const name=$('config-name').value.trim();if(!name){message('Give the config a name');return}
+ await request('/api/sim/configs','POST',{name,config:collect()});loadedName=name;dirty=false;updateDraftLabel();$('config-name').value='';await renderSavedConfigs();message('Saved '+name);
+}
+async function action(a){try{if(a==='start'){let x=await request('/api/sim/runs','POST',{config:collect()});run=x.id}else await request('/api/sim/runs/'+run+'/'+a,'POST');await refresh()}catch(e){message(e.message)}}
 function renderEvents(){
  let cats={};config.categories.forEach(c=>cats[c.id]=c.label);
  $('events').innerHTML=latestEvents.map(e=>'<tr><td>'+esc(new Date(e.created_at).toLocaleTimeString())+'</td><td>'+esc(cats[e.category_id]||e.category_id)+'</td><td>'+esc(e.query)+'</td><td><span class="pill">'+esc(e.provider||'—')+'</span></td><td>'+esc(e.error||(!e.feedback?'Unknown':Object.entries(e.feedback).map(([key,v])=>(OUTCOMES[key]||key)+': '+(v?'yes':'no')).join(' · ')))+'</td></tr>').join('');
@@ -57,12 +76,18 @@ function renderEvents(){
  $('event-count').textContent=latestEvents.length+' recent';
 
 }
-async function refresh(){try{let list=await request('/api/sim/runs');let current=run?list.find(x=>x.id===run):list[0];if(!current)return;run=current.id;$('start').hidden=current.status==='paused';$('resume').hidden=current.status!=='paused';$('status').textContent=current.status;$('issued').textContent=current.issued;$('completed').textContent=current.completed;$('errors').textContent=current.errors;$('runid').textContent='Run '+run;$('start').disabled=['running','paused','stopping'].includes(current.status);$('pause').disabled=current.status!=='running';$('resume').disabled=current.status!=='paused';$('stop').disabled=!['running','paused'].includes(current.status);latestEvents=await request('/api/sim/events?run_id='+run);renderEvents();await renderChart()}catch(e){message(e.message)}}
-$('save').onclick=()=>save().catch(e=>message(e.message));['start','pause','resume','stop'].forEach(a=>$(a).onclick=()=>action(a));
-$('apply-json').onclick=()=>{try{config=JSON.parse($('advanced').value);renderConfig();message('JSON loaded. Save scenario to apply.')}catch(e){message(e.message)}};
-(async()=>{try{config=await request('/api/sim/scenario');renderConfig();await refresh();setInterval(refresh,1500)}catch(e){message(e.message)}})();
+async function refresh(){try{let list=await request('/api/sim/runs');let current=run?list.find(x=>x.id===run):list[0];if(!current)return;run=current.id;currentStatus=current.status;$('start').hidden=current.status==='paused';$('resume').hidden=current.status!=='paused';$('status').textContent=current.status;$('issued').textContent=current.issued;$('completed').textContent=current.completed;$('errors').textContent=current.errors;$('runid').textContent='Run '+run;$('start').disabled=['running','paused','stopping'].includes(current.status);$('pause').disabled=current.status!=='running';$('resume').disabled=current.status!=='paused';$('stop').disabled=!['running','paused'].includes(current.status);latestEvents=await request('/api/sim/events?run_id='+run);renderEvents();await renderChart()}catch(e){message(e.message)}}
 
-document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===button));document.querySelectorAll('.tab-pane').forEach(p=>p.hidden=p.id!==button.dataset.tab)});
+$('save-config').onclick=()=>saveNewConfig().catch(e=>message(e.message));
+$('rate').oninput=()=>{config.rate_per_second=Number($('rate').value);$('qps-output').value=$('rate').value;markDirty()};
+$('category-search').oninput=renderCategories;
+['start','pause','resume','stop'].forEach(a=>$(a).onclick=()=>action(a));
+(async()=>{try{
+ [config,catalog]=await Promise.all([request('/api/sim/scenario'),request('/api/sim/categories')]);
+ config.total_queries=null;renderConfig();await renderSavedConfigs();await refresh();setInterval(refresh,1500);
+}catch(e){message(e.message)}})();
+
+document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{if(button.dataset.tab==='success')renderOutcomeEditor();document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===button));document.querySelectorAll('.tab-pane').forEach(p=>p.hidden=p.id!==button.dataset.tab)});
 async function renderChart(){
  if(!run)return;
  let data=await request('/api/sim/timeseries?run_id='+run);
