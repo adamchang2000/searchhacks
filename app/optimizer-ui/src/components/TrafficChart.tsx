@@ -40,6 +40,7 @@ export function TrafficChart({ buckets, bucketSeconds, series, keyOf, color }: P
   useLayoutEffect(() => {
     const el = wrap.current;
     if (!el) return;
+    setWidth(el.getBoundingClientRect().width);
     const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
