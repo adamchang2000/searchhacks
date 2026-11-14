@@ -123,7 +123,10 @@ def work(run_id, control):
                 conn.execute("UPDATE sim_runs SET issued=issued+1 WHERE id=?", (run_id,))
             provider, good, error = None, None, None
             try:
-                route = call("/api/which_search", {"query": query, "available_providers": config["providers"]})
+                # The category is known, so skip the optimizer's (paid) jev classification and make
+                # it route on the same category that success_rates are keyed by.
+                route = call("/api/which_search", {"query": query, "available_providers": config["providers"],
+                                                   "override_query_category": category["id"]})
                 provider = route["provider"]
                 good = random.random() < config["success_rates"][str(category["id"])][provider]
                 call("/api/submit_feedback", {"feedback_token": route["feedback_token"], "is_good": good})
