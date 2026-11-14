@@ -3,6 +3,10 @@ import json
 from pathlib import Path
 
 DESCRIPTIONS = {
+    "Tavily wins on everything": "Tavily returns 100% positive outcomes in shopping, travel, and computer science. All other providers have low success rates. An obvious-winner test for Tavily.",
+    "Parallel wins on everything": "Parallel returns 100% positive outcomes in every active category. Load this after the Tavily preset to test adaptation to a new winner.",
+    "All providers equal": "Every provider has a 50% probability for each outcome in every active category. A neutral baseline with no true best provider.",
+
     "Category crossover · Exa shopping / Tavily travel": "Exa wins on shopping; Tavily wins on travel. Tests whether routing learns a different winner for each category.",
     "Three specialists · Brave / Parallel / Exa": "Brave wins shopping, Parallel wins travel, and Exa wins computer science. Equal traffic tests three independent category preferences.",
     "Close race · Exa vs Tavily": "Exa has a small edge in shopping; Tavily has a small edge in travel. Tests learning when the difference is only five percentage points.",
@@ -32,7 +36,18 @@ def demo_configs(providers):
                 },
             },
         }
+    active_categories = [(18, 1), (67, 1), (1227, 1)]
     return [
+        make("Tavily wins on everything", active_categories, {
+            category: {"tavily": (1, 1, 1)} for category, _ in active_categories
+        }),
+        make("Parallel wins on everything", active_categories, {
+            category: {"parallel": (1, 1, 1)} for category, _ in active_categories
+        }),
+        make("All providers equal", active_categories, {
+            category: {provider: (.5, .5, .5) for provider in providers} for category, _ in active_categories
+        }),
+
         make("Category crossover · Exa shopping / Tavily travel", [(18, 1), (67, 1)], {
             18: {"exa": (.8, .9, .75), "tavily": (.2, .3, .25)},
             67: {"exa": (.2, .3, .25), "tavily": (.8, .9, .75)},
