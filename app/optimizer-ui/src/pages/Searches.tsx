@@ -10,11 +10,52 @@ import { int, timeAgo } from "@/lib/format";
 const PAGE_SIZE = 50;
 type FeedbackFilter = "good" | "bad" | "none";
 
-function FeedbackBadge({ feedback }: { feedback: SearchOut["feedback"] }) {
-  const entries = Object.entries(feedback ?? {}).filter(([, value]) => value != null);
-  if (!entries.length) return <span className="text-muted">pending</span>;
-  const labels: Record<string, string> = { purchase_conversion: "Purchase", user_confirmed_outcome: "Confirmed", user_stopped_following_up: "No follow-up" };
-  return <span className="inline-flex flex-wrap gap-2">{entries.map(([key, value]) => <span key={key} style={{color: value ? "var(--status-good)" : "var(--status-bad)"}}>{labels[key] ?? key}: {value ? "yes" : "no"}</span>)}</span>;
+type FeedbackRecord = NonNullable<SearchOut["feedback"]>;
+
+/** The outcome fields of a feedback submission, in column order. Descriptions follow
+ * lib/optimizer-protocol/API_REFERENCE.md. */
+const FEEDBACK_FIELDS: { key: keyof FeedbackRecord; label: string; description: string }[] = [
+  { key: "purchase_conversion", label: "Purchase", description: "The user went on to purchase." },
+  { key: "user_confirmed_outcome", label: "Confirmed", description: "The user confirmed the answer worked for them." },
+  {
+    key: "user_stopped_following_up",
+    label: "No follow-up",
+    description: "The user stopped asking follow-ups (a proxy for satisfaction).",
+  },
+];
+
+const COLUMNS = 4 + FEEDBACK_FIELDS.length;
+
+/** One outcome: a status icon carries the color, the word carries the meaning. */
+function Outcome({ value }: { value: boolean | null | undefined }) {
+  if (value == null) return <span className="text-muted" title="Not reported">—</span>;
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <span aria-hidden style={{ color: value ? "var(--status-good)" : "var(--status-bad)" }}>
+        {value ? "✓" : "✗"}
+      </span>
+      {value ? "Yes" : "No"}
+    </span>
+  );
+}
+
+/** The feedback sub-columns for one search: one cell per field, or one "pending" cell. */
+function FeedbackCells({ feedback }: { feedback: SearchOut["feedback"] }) {
+  if (!feedback)
+    return (
+      <td colSpan={FEEDBACK_FIELDS.length} className="text-muted px-4 py-2 text-center">
+        pending
+      </td>
+    );
+  return (
+    <>
+      {FEEDBACK_FIELDS.map((f, i) => (
+        <td key={f.key} className={`py-2 text-center ${i === FEEDBACK_FIELDS.length - 1 ? "pr-4 pl-2" : "px-2"}`}>
+          <Outcome value={feedback[f.key]} />
+        </td>
+      ))}
+    </>
+  );
 }
 
 function Category({ s }: { s: SearchOut }) {
@@ -47,10 +88,22 @@ function Detail({ s }: { s: SearchOut }) {
     ["Category source", <code>{s.category_source}</code>],
     [
       "Feedback",
-      <span className="inline-flex items-center gap-2">
-        <FeedbackBadge feedback={s.feedback} />
-        {s.feedback_at && <span className="text-muted text-xs">{new Date(s.feedback_at).toLocaleString()}</span>}
-      </span>,
+      s.feedback ? (
+        <span className="flex flex-col gap-0.5">
+          {FEEDBACK_FIELDS.map((f) => (
+            <span key={f.key} className="flex items-center gap-2">
+              <span className="text-secondary w-24">{f.label}</span>
+              <Outcome value={s.feedback![f.key]} />
+              <code className="text-muted text-xs">{f.key}</code>
+            </span>
+          ))}
+          {s.feedback_at && (
+            <span className="text-muted text-xs">Latest submission {new Date(s.feedback_at).toLocaleString()}</span>
+          )}
+        </span>
+      ) : (
+        <span className="text-muted">pending</span>
+      ),
     ],
   ];
   return (
@@ -172,12 +225,25 @@ export function Searches() {
       <div className="card overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-secondary text-xs">
+            <tr>
+              <th rowSpan={2} className="border-token border-b px-4 py-2 align-bottom font-medium">When</th>
+              <th rowSpan={2} className="border-token border-b px-2 py-2 align-bottom font-medium">Query</th>
+              <th rowSpan={2} className="border-token border-b px-2 py-2 align-bottom font-medium">Provider</th>
+              <th rowSpan={2} className="border-token border-b px-2 py-2 align-bottom font-medium">Category</th>
+              <th colSpan={FEEDBACK_FIELDS.length} className="px-4 pt-2 pb-1 text-center font-medium">
+                <span className="border-token block border-b pb-1">Feedback</span>
+              </th>
+            </tr>
             <tr className="border-token border-b">
-              <th className="px-4 py-2 font-medium">When</th>
-              <th className="px-2 py-2 font-medium">Query</th>
-              <th className="px-2 py-2 font-medium">Provider</th>
-              <th className="px-2 py-2 font-medium">Category</th>
-              <th className="px-4 py-2 font-medium">Feedback</th>
+              {FEEDBACK_FIELDS.map((f, i) => (
+                <th
+                  key={f.key}
+                  title={f.description}
+                  className={`whitespace-nowrap pb-2 text-center font-medium ${i === FEEDBACK_FIELDS.length - 1 ? "pr-4 pl-2" : "px-2"}`}
+                >
+                  {f.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -203,13 +269,11 @@ export function Searches() {
                   <td className="px-2 py-2">
                     <Category s={s} />
                   </td>
-                  <td className="px-4 py-2">
-                    <FeedbackBadge feedback={s.feedback} />
-                  </td>
+                  <FeedbackCells feedback={s.feedback} />
                 </tr>
                 {open === s.id && (
                   <tr className="border-token border-b" style={{ background: "var(--surface-0)" }}>
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={COLUMNS} className="px-4 py-3">
                       <Detail s={s} />
                     </td>
                   </tr>
@@ -218,7 +282,7 @@ export function Searches() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-muted px-4 py-8 text-center">
+                <td colSpan={COLUMNS} className="text-muted px-4 py-8 text-center">
                   {searches.isError
                     ? "Can't reach the optimizer server."
                     : searches.isLoading
