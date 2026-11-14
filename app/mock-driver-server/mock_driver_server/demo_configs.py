@@ -5,6 +5,13 @@ Run from app/mock-driver-server: uv run python -m mock_driver_server.demo_config
 import json
 from pathlib import Path
 
+DESCRIPTIONS = {
+    "Category crossover · Exa shopping / Tavily travel": "Exa wins on shopping; Tavily wins on travel. Tests whether routing learns a different winner for each category.",
+    "Three specialists · Brave / Parallel / Exa": "Brave wins shopping, Parallel wins travel, and Exa wins computer science. Equal traffic tests three independent category preferences.",
+    "Close race · Exa vs Tavily": "Exa has a small edge in shopping; Tavily has a small edge in travel. Tests learning when the difference is only five percentage points.",
+    "Clear winner · Exa baseline": "Exa has a large advantage in every category. A baseline for checking that routing converges toward an obvious winner.",
+}
+
 OUTCOMES = ("purchase_conversion", "user_confirmed_outcome", "user_stopped_following_up")
 
 
@@ -13,6 +20,7 @@ def demo_configs(providers):
     def make(name, categories, strengths):
         return {
             "name": name,
+            "description": DESCRIPTIONS[name],
             "config": {
                 "total_queries": None,
                 "rate_per_second": 5,
@@ -59,11 +67,13 @@ def main():
         for item in demo_configs(PROVIDERS):
             validate(item["config"])
             if item["name"] not in names:
-                conn.execute("INSERT INTO saved_sim_configs VALUES (?,?,?,?)",
-                             (str(uuid4()), item["name"], now(), json.dumps(item["config"])))
+                conn.execute("INSERT INTO saved_sim_configs (id,name,created_at,body,description) VALUES (?,?,?,?,?)",
+                             (str(uuid4()), item["name"], now(), json.dumps(item["config"]), item["description"]))
                 print("Created: " + item["name"])
             else:
-                print("Already exists: " + item["name"])
+                conn.execute("UPDATE saved_sim_configs SET description=? WHERE name=? AND description=''",
+                             (item["description"], item["name"]))
+                print("Updated description: " + item["name"])
 
 
 if __name__ == "__main__":

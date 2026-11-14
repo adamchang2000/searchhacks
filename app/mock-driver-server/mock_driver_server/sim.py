@@ -68,13 +68,22 @@ def db():
     for column, kind in (("goodness", "REAL"), ("feedback_submitted_at", "TEXT")):
         if column not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
             conn.execute("ALTER TABLE sim_events ADD COLUMN " + column + " " + kind)
+    for table in ("sim_runs", "sim_events"):
+        if "config_revision" not in {row["name"] for row in conn.execute("PRAGMA table_info(" + table + ")")}:
+            conn.execute("ALTER TABLE " + table + " ADD COLUMN config_revision INTEGER NOT NULL DEFAULT 0")
+    if "outcome_probabilities" not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
+        conn.execute("ALTER TABLE sim_events ADD COLUMN outcome_probabilities TEXT")
     conn.execute("INSERT OR IGNORE INTO sim_config VALUES (1, ?)", (json.dumps(DEFAULT),))
     conn.execute("""CREATE TABLE IF NOT EXISTS saved_sim_configs (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL)""")
+    if "description" not in {row["name"] for row in conn.execute("PRAGMA table_info(saved_sim_configs)")}:
+        conn.execute("ALTER TABLE saved_sim_configs ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+    conn.execute("UPDATE saved_sim_configs SET description=? WHERE name=? AND description=''",
+                 ("A simple mix of shopping, travel, and computer science queries to get started.", "Starter config"))
     if not conn.execute("SELECT 1 FROM saved_sim_configs LIMIT 1").fetchone():
         initial = normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"]))
         initial["total_queries"] = None
-        conn.execute("INSERT INTO saved_sim_configs VALUES (?,?,?,?)",
+        conn.execute("INSERT INTO saved_sim_configs (id,name,created_at,body) VALUES (?,?,?,?)",
                      (str(uuid4()), "Starter config", now(), json.dumps(initial)))
     try:
         with conn:
@@ -153,12 +162,18 @@ def work(run_id, control):
             if control["stop"].is_set():
                 break
             started = time.monotonic()
+            with db() as conn:
+                current = conn.execute("SELECT config,config_revision FROM sim_runs WHERE id=?", (run_id,)).fetchone()
+            config = normalize(json.loads(current["config"]))
+            revision = current["config_revision"]
+            categories = [c for c in config["categories"] if c["weight"] > 0]
             category = random.choices(categories, weights=[c["weight"] for c in categories])[0]
             query = random.choices(category["queries"], weights=[q["weight"] for q in category["queries"]])[0]["text"]
             with db() as conn:
                 conn.execute("UPDATE sim_runs SET issued=issued+1 WHERE id=?", (run_id,))
             provider, feedback, error = None, {}, None
             goodness, submitted_at = random.random(), None
+            probabilities = {}
             try:
                 # The category is known, so skip the optimizer's (paid) jev classification and make
                 # it route on the same category that success_rates are keyed by.
@@ -176,11 +191,14 @@ def work(run_id, control):
             except Exception as exc:
                 error = str(exc)[:500]
             with db() as conn:
-                conn.execute("INSERT INTO sim_events (run_id,created_at,category_id,query,provider,feedback,error,goodness,feedback_submitted_at) VALUES (?,?,?,?,?,?,?,?,?)",
-                             (run_id, now(), category["id"], query, provider, json.dumps(feedback), error, goodness, submitted_at))
+                conn.execute("INSERT INTO sim_events (run_id,created_at,category_id,query,provider,feedback,error,goodness,feedback_submitted_at,config_revision,outcome_probabilities) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                             (run_id, now(), category["id"], query, provider, json.dumps(feedback), error, goodness, submitted_at, revision, json.dumps(probabilities)))
                 conn.execute("UPDATE sim_runs SET completed=completed+1, errors=errors+? WHERE id=?",
                              (int(error is not None), run_id))
-            if control["stop"].wait(max(0, 1 / config["rate_per_second"] - (time.monotonic() - started))):
+            control.get("settings_changed", control["stop"]).wait(max(0, 1 / config["rate_per_second"] - (time.monotonic() - started)))
+            if "settings_changed" in control:
+                control["settings_changed"].clear()
+            if control["stop"].is_set():
                 break
         status = "stopped" if control["stop"].is_set() else "completed"
     except Exception:
@@ -218,12 +236,34 @@ def start(request):
         run_id = str(uuid4())
         conn.execute("INSERT INTO sim_runs (id,created_at,status,config) VALUES (?,?,?,?)",
                      (run_id, now(), "running", json.dumps(config)))
-    control = {"resume": threading.Event(), "stop": threading.Event()}
+    control = {"resume": threading.Event(), "stop": threading.Event(), "settings_changed": threading.Event()}
     control["resume"].set()
     with _lock:
         _active[run_id] = control
     threading.Thread(target=work, args=(run_id, control), daemon=True).start()
     return {"id": run_id}
+
+@router.patch("/runs/{run_id}/config")
+def update_run_config(request, run_id: UUID):
+    try:
+        payload = json.loads(request.body)
+        config = validate(normalize(payload["config"]))
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HttpError(400, str(exc))
+    with db() as conn:
+        result = conn.execute(
+            """UPDATE sim_runs SET config=?, config_revision=config_revision+1
+               WHERE id=? AND status IN ('running', 'paused')""",
+            (json.dumps(config), str(run_id)),
+        )
+        if not result.rowcount:
+            raise HttpError(409, "Run is no longer active")
+        revision = conn.execute("SELECT config_revision FROM sim_runs WHERE id=?", (str(run_id),)).fetchone()["config_revision"]
+    with _lock:
+        control = _active.get(str(run_id))
+        if control:
+            control["settings_changed"].set()
+    return {"ok": True, "config_revision": revision}
 
 @router.post("/runs/{run_id}/{action}")
 def change_run(request, run_id: UUID, action: str):
@@ -249,6 +289,7 @@ def change_run(request, run_id: UUID, action: str):
         else:
             control["stop"].set()
             control["resume"].set()
+            control["settings_changed"].set()
             status = "stopping"
         conn.execute("UPDATE sim_runs SET status=? WHERE id=?", (status, key))
     return {"ok": True}
@@ -261,21 +302,44 @@ def events(request, run_id: UUID, limit: int = 100):
         return [{**dict(row), "feedback": json.loads(row["feedback"]) if row["feedback"] else None} for row in rows]
 
 @router.get("/timeseries")
-def timeseries(request, run_id: UUID):
+def timeseries(request, run_id: UUID, outcome: str = "purchase_conversion", category_id: int | None = None):
+    if outcome not in FIELDS:
+        raise HttpError(400, "Unknown outcome")
     end = time.time()
     start = end - 60
     with db() as conn:
+        run = conn.execute("SELECT config FROM sim_runs WHERE id=?", (str(run_id),)).fetchone()
+        if run is None:
+            raise HttpError(404, "Run not found")
+        config = normalize(json.loads(run["config"]))
+        categories = [{"id": c["id"], "label": c["label"]} for c in config["categories"] if c["weight"] > 0]
+        if category_id not in {c["id"] for c in categories}:
+            category_id = categories[0]["id"]
+        path = "$." + outcome
         rows = conn.execute(
-            """SELECT provider, query, goodness, feedback, feedback_submitted_at
-               FROM sim_events WHERE run_id=? AND feedback_submitted_at >= ?
-               AND goodness IS NOT NULL ORDER BY id""",
-            (str(run_id), datetime.fromtimestamp(start, timezone.utc).isoformat()),
+            """WITH observations AS (
+                 SELECT id, provider, query, feedback, feedback_submitted_at, config_revision, outcome_probabilities,
+                        json_extract(feedback, ?) AS value
+                 FROM sim_events WHERE run_id=? AND category_id=?
+                   AND feedback_submitted_at IS NOT NULL
+                   AND json_type(feedback, ?) IN ('true', 'false')
+               ), cumulative AS (
+                 SELECT *, SUM(value) OVER (PARTITION BY provider, config_revision ORDER BY id) AS successes,
+                        COUNT(*) OVER (PARTITION BY provider, config_revision ORDER BY id) AS samples
+                 FROM observations
+               )
+               SELECT * FROM cumulative WHERE feedback_submitted_at >= ? ORDER BY id""",
+            (path, str(run_id), category_id, path, datetime.fromtimestamp(start, timezone.utc).isoformat()),
         ).fetchall()
-    points = [{"provider": row["provider"], "query": row["query"], "goodness": row["goodness"],
+    targets = {p: config["success_rates"][str(category_id)].get(p, {}).get(outcome) for p in config["providers"]}
+    points = [{"provider": row["provider"], "query": row["query"],
+               "rate": row["successes"] / row["samples"], "successes": row["successes"],
+               "samples": row["samples"], "target": json.loads(row["outcome_probabilities"]).get(outcome) if row["outcome_probabilities"] else targets.get(row["provider"]),
+               "config_revision": row["config_revision"],
                "feedback": json.loads(row["feedback"]),
                "timestamp": datetime.fromisoformat(row["feedback_submitted_at"]).timestamp()} for row in rows]
-    return {"providers": sorted({p["provider"] for p in points}), "points": points, "start": start, "end": end}
-
+    return {"providers": config["providers"], "points": points, "start": start, "end": end,
+            "outcome": outcome, "category_id": category_id, "categories": categories, "targets": targets}
 
 @router.get("/categories")
 def category_catalog(request):
@@ -284,7 +348,7 @@ def category_catalog(request):
 @router.get("/configs")
 def saved_configs(request):
     with db() as conn:
-        return [dict(row) for row in conn.execute("SELECT id,name,created_at FROM saved_sim_configs ORDER BY created_at DESC")]
+        return [dict(row) for row in conn.execute("SELECT id,name,created_at,description FROM saved_sim_configs ORDER BY created_at DESC")]
 
 @router.get("/configs/{config_id}")
 def load_config(request, config_id: UUID):
@@ -302,9 +366,14 @@ def save_config(request):
         if not name or len(name) > 80:
             raise ValueError("Name must be between 1 and 80 characters")
         config = validate(normalize(payload["config"]))
+        description = payload.get("description", "").strip()
+        if len(description) > 400:
+            raise ValueError("Description must be at most 400 characters")
+        if not description:
+            description = str(config["rate_per_second"]) + " QPS across " + str(sum(c["weight"] > 0 for c in config["categories"])) + " categories and " + str(len(config["providers"])) + " providers."
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise HttpError(400, str(exc))
     key = str(uuid4())
     with db() as conn:
-        conn.execute("INSERT INTO saved_sim_configs VALUES (?,?,?,?)", (key, name, now(), json.dumps(config)))
+        conn.execute("INSERT INTO saved_sim_configs (id,name,created_at,body,description) VALUES (?,?,?,?,?)", (key, name, now(), json.dumps(config), description))
     return {"id": key, "name": name}

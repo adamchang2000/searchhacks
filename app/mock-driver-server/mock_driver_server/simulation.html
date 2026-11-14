@@ -1,22 +1,22 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SearchHacks · Simulation</title><link rel="stylesheet" href="/assets/shared.css"><style>.success-slider{display:flex;align-items:center;gap:10px;min-width:120px}.success-slider input[type=range]{width:100%;min-width:65px;padding:0;accent-color:#2563eb;cursor:pointer;border:0;box-shadow:none}.success-slider output{min-width:35px;text-align:right;font-variant-numeric:tabular-nums;color:#475467;font-size:12px}.outcome-filters{display:flex;gap:14px;margin-bottom:14px}.outcome-filters label{flex:1}.outcome-filters select{display:block;margin-top:6px;width:100%;padding:8px;border:1px solid #dde3eb;border-radius:6px;background:white;color:#263245}.outcome-row{padding:10px 0;border-bottom:1px solid #edf0f4}.outcome-row label{font-size:12px;color:#475467}.outcome-row label input{width:auto}.outcome-row .success-slider{margin-top:8px}.success-slider output{min-width:52px}.qps-control{display:flex;align-items:center!important;gap:10px;margin-bottom:16px}.qps-control label{font-weight:600;font-size:12px}.qps-control input[type=range]{width:160px;padding:0;accent-color:#2563eb}.qps-control output{min-width:28px;font-variant-numeric:tabular-nums}#draft-state{margin-left:auto;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.config-save{display:flex;gap:8px;margin-bottom:12px}.config-save input{min-width:0;flex:1}.config-save button{white-space:nowrap}.saved-config{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #edf0f4}.saved-config strong{font-size:12px}#category-search{margin-bottom:8px}.category-weight{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f2f5}.weight-ring{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:conic-gradient(#5986ce var(--turn),#eef1f5 0);display:grid;place-items:center}.weight-ring b{background:white;width:29px;height:29px;display:grid;place-items:center;border-radius:50%;font-size:11px;font-weight:500}.category-weight-content{flex:1;min-width:0}.category-weight-content label{display:block;font-size:12px;color:#475467;margin-bottom:5px}.weight-dial{padding:0;accent-color:#5986ce;width:100%}#category-count{margin-bottom:8px}
-</style></head><body><main>
+.chart-title{flex-wrap:wrap;gap:8px}.chart-title>div:first-child{flex:1;min-width:240px}.chart-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.chart-filters select{font:inherit;font-size:11px;padding:4px 6px;border:1px solid #e0e5ec;border-radius:5px;background:white;color:#475467}.chart-filters span{font-size:10px;color:#8a95a4}#legend{flex-wrap:wrap;max-width:55%;justify-content:flex-end;gap:5px 12px}.chart-panel{min-height:205px}#chart{min-height:90px}.saved-config{gap:12px}.config-description{font-size:11px;color:#7b8797;line-height:1.45;margin:5px 0;max-width:420px}.saved-config button{flex-shrink:0}</style></head><body><main>
 <header><h1>SearchHacks <span>/ simulation</span></h1><div class="controls"><button id="start" class="primary icon" aria-label="Start run" title="Start run"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="pause" class="icon" aria-label="Pause" title="Pause" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor"/></svg></button><button id="resume" class="primary icon" aria-label="Resume" title="Resume" hidden disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button id="stop" class="icon" aria-label="Stop" title="Stop" disabled><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button></div></header>
 <div class="stats"><div class="stat"><span>Status</span><b id="status">Idle</b></div><div class="stat"><span>Issued</span><b id="issued">0</b></div><div class="stat"><span>Completed</span><b id="completed">0</b></div><div class="stat"><span>Errors</span><b id="errors">0</b></div><span id="runid"></span></div>
 <div class="workspace">
 <section class="panel"><div class="panel-head"><nav class="tabs" aria-label="Simulation settings"><button class="tab selected" data-tab="configs-pane">Configs</button><button class="tab" data-tab="success">Provider outcomes</button><button class="tab" data-tab="queries-pane">Category mix</button></nav></div><div class="pane-body">
 <div class="traffic qps-control"><label for="rate">QPS</label><input id="rate" type="range" min=".1" max="30" step=".1" aria-label="Queries per second"><output id="qps-output">2</output><span id="draft-state" class="muted"></span></div>
-<div class="tab-pane" id="configs-pane"><div class="config-save"><input id="config-name" maxlength="80" placeholder="Name this config" aria-label="New config name"><button id="save-config">Save as new</button></div><p class="help" id="config-summary">Load a saved configuration, or tweak settings and save a new one.</p><div id="saved-configs"></div></div>
-<div class="tab-pane" id="success" hidden><p class="help">Observed outcome probabilities for each provider and category. Unchecked fields stay unknown. Follow-up cessation is sampled at the end of each synthetic 3-query session. Changes apply when you start a new run.</p><div style="overflow:auto"><div id="rates-table"></div></div></div>
+<div class="tab-pane" id="configs-pane"><div class="config-save"><input id="config-name" maxlength="80" placeholder="Name this config" aria-label="New config name"><button id="save-config">Save as new</button></div><input id="config-description" placeholder="Short description (optional)" maxlength="400" aria-label="Config description" style="margin-bottom:10px"><p class="help" id="config-summary">Load a saved configuration, or tweak settings and save a new one.</p><div id="saved-configs"></div></div>
+<div class="tab-pane" id="success" hidden><p class="help">Observed outcome probabilities for each provider and category. Unchecked fields stay unknown. Follow-up cessation is sampled at the end of each synthetic 3-query session. Changes apply live, including while paused.</p><div style="overflow:auto"><div id="rates-table"></div></div></div>
 <div class="tab-pane" id="queries-pane" hidden><p class="help">Higher weights produce more traffic. Zero turns a category off. Queries are pregenerated.</p><input id="category-search" type="search" placeholder="Find a category…" aria-label="Find a category"><small id="category-count"></small><div id="categories"></div></div>
 </div></section>
 <section class="panel"><div class="panel-head"><h2>Live queries</h2><span class="muted" id="event-count">0 recent</span></div><div class="scroll"><table class="feed"><thead><tr><th>Time</th><th>Category</th><th>Query</th><th>Provider</th><th>Feedback</th></tr></thead><tbody id="events"></tbody></table></div></section>
 </div>
-<section class="panel chart-panel"><div class="chart-title"><div><h2>Query activity</h2><p>Submitted feedback · latent goodness · last 60 seconds</p></div><div id="legend"></div></div><svg id="chart" viewBox="0 0 1100 145" preserveAspectRatio="none" role="img" aria-label="Submitted feedback goodness over time by provider"></svg></section>
+<section class="panel chart-panel"><div class="chart-title"><div><h2>Observed outcomes</h2><p>Success rate since last settings change · one dot per submission · last 60s</p><div class="chart-filters"><select id="chart-outcome" aria-label="Chart outcome"><option value="purchase_conversion">Purchase conversion</option><option value="user_confirmed_outcome">User confirmed outcome</option><option value="user_stopped_following_up">Stopped following up</option></select><select id="chart-category" aria-label="Chart category"></select><span>Settings apply live · hover for sample counts and targets</span></div></div><div id="legend"></div></div><svg id="chart" viewBox="0 0 1100 145" preserveAspectRatio="none" role="img" aria-label="Observed outcome success rate by provider, from zero to one hundred percent"></svg></section>
 </main><div id="message" role="status"></div><script>
 const OUTCOMES={purchase_conversion:'Purchase conversion',user_confirmed_outcome:'User confirmed outcome',user_stopped_following_up:'Stopped following up (>1 query)'};
-let config, run, latestEvents=[];let selectedProvider, selectedCategory;let catalog=[],dirty=false,loadedName='Unsaved config',currentStatus='idle';
+let config, run, latestEvents=[];let selectedProvider, selectedCategory;let catalog=[],dirty=false,loadedName='Unsaved config',currentStatus='idle';let liveTimer,liveSequence=0;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function request(path,method,body){let r=await fetch(path,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});let j=await r.json();if(!r.ok)throw Error(j.detail||JSON.stringify(j));return j}
@@ -44,7 +44,17 @@ function renderOutcomeEditor(){
 }
 
 function updateDraftLabel(){$('draft-state').textContent=loadedName+(dirty?' · edited':'')}
-function markDirty(){dirty=true;updateDraftLabel()}
+function markDirty(){dirty=true;updateDraftLabel();scheduleLiveUpdate()}
+function scheduleLiveUpdate(){
+ clearTimeout(liveTimer);
+ if(run&&['running','paused'].includes(currentStatus))liveTimer=setTimeout(()=>applyLiveConfig().catch(e=>message('Settings not applied: '+e.message)),250);
+}
+async function applyLiveConfig(){
+ if(!run||!['running','paused'].includes(currentStatus))return;
+ const sequence=++liveSequence;
+ await request('/api/sim/runs/'+run+'/config','PATCH',{config:collect()});
+ if(sequence===liveSequence){$('draft-state').textContent=loadedName+' · live';await renderChart()}
+}
 function renderCategories(){
  const query=$('category-search').value.toLowerCase();
  const weights=new Map(config.categories.map(c=>[c.id,c.weight]));
@@ -61,12 +71,12 @@ function renderCategories(){
 function collect(){return {...structuredClone(config),total_queries:null,rate_per_second:Number($('rate').value)}}
 async function renderSavedConfigs(){
  const items=await request('/api/sim/configs');
- $('saved-configs').innerHTML=items.map(c=>'<div class="saved-config"><div><strong>'+esc(c.name)+'</strong><small>'+esc(new Date(c.created_at).toLocaleString())+'</small></div><button data-config="'+c.id+'">Load</button></div>').join('');
- document.querySelectorAll('[data-config]').forEach(button=>button.onclick=async()=>{try{const item=await request('/api/sim/configs/'+button.dataset.config);config=item.config;config.total_queries=null;loadedName=item.name;dirty=false;renderConfig();message('Loaded '+item.name+(currentStatus==='running'||currentStatus==='paused'?' for the next run':''))}catch(e){message(e.message)}});
+ $('saved-configs').innerHTML=items.map(c=>'<div class="saved-config"><div><strong>'+esc(c.name)+'</strong><p class="config-description">'+esc(c.description||'')+'</p><small>'+esc(new Date(c.created_at).toLocaleString())+'</small></div><button data-config="'+c.id+'">Load</button></div>').join('');
+ document.querySelectorAll('[data-config]').forEach(button=>button.onclick=async()=>{try{const item=await request('/api/sim/configs/'+button.dataset.config);config=item.config;config.total_queries=null;loadedName=item.name;dirty=false;renderConfig();await applyLiveConfig();message('Loaded '+item.name+(['running','paused'].includes(currentStatus)?' · applied live':''))}catch(e){message(e.message)}});
 }
 async function saveNewConfig(){
  const name=$('config-name').value.trim();if(!name){message('Give the config a name');return}
- await request('/api/sim/configs','POST',{name,config:collect()});loadedName=name;dirty=false;updateDraftLabel();$('config-name').value='';await renderSavedConfigs();message('Saved '+name);
+ await request('/api/sim/configs','POST',{name,description:$('config-description').value.trim(),config:collect()});loadedName=name;dirty=false;updateDraftLabel();$('config-name').value='';$('config-description').value='';await renderSavedConfigs();message('Saved '+name);
 }
 async function action(a){try{if(a==='start'){let x=await request('/api/sim/runs','POST',{config:collect()});run=x.id}else await request('/api/sim/runs/'+run+'/'+a,'POST');await refresh()}catch(e){message(e.message)}}
 function renderEvents(){
@@ -88,20 +98,28 @@ $('category-search').oninput=renderCategories;
 }catch(e){message(e.message)}})();
 
 document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{if(button.dataset.tab==='success')renderOutcomeEditor();document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===button));document.querySelectorAll('.tab-pane').forEach(p=>p.hidden=p.id!==button.dataset.tab)});
+
+$('chart-outcome').onchange=()=>renderChart().catch(e=>message(e.message));
+$('chart-category').onchange=()=>renderChart().catch(e=>message(e.message));
 async function renderChart(){
  if(!run)return;
- let data=await request('/api/sim/timeseries?run_id='+run);
- const W=1100,H=145,L=35,R=15,T=10,B=25,colors=['#2563eb','#14a093','#e29232','#a855f7','#e45c85'];
-
+ const outcome=$('chart-outcome').value, category=$('chart-category').value;
+ let data=await request('/api/sim/timeseries?run_id='+run+'&outcome='+outcome+(category?'&category_id='+category:''));
+ if(outcome!==$('chart-outcome').value||category!==$('chart-category').value)return;
+ $('chart-category').innerHTML=data.categories.map(c=>'<option value="'+c.id+'" '+(c.id===data.category_id?'selected':'')+'>'+esc(c.label)+'</option>').join('');
+ const W=1100,H=145,L=45,R=15,T=10,B=25,colors=['#2563eb','#0d9488','#ea580c','#9333ea','#db2777','#64748b','#65a30d','#0891b2','#ca8a04','#be123c','#4f46e5'];
  const providers=data.providers;let content='';
- for(let n=0;n<=2;n++){let y=T+(H-T-B)*n/2;content+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="#edf0f4"/><text x="25" y="'+(y+4)+'" text-anchor="end" fill="#8893a3" font-size="10">'+(1-n/2).toFixed(1)+'</text>'}
- for(const point of data.points||[]){
-   const x=L+(point.timestamp-data.start)/(data.end-data.start)*(W-L-R),y=T+(1-point.goodness)*(H-T-B);
-   content+='<circle cx="'+x+'" cy="'+y+'" r="4" opacity=".8" fill="'+colors[providers.indexOf(point.provider)%colors.length]+'"><title>'+esc(point.provider+' · goodness '+point.goodness.toFixed(2)+' · '+point.query+' · '+Object.entries(point.feedback).map(([k,v])=>(OUTCOMES[k]||k)+': '+(v?'yes':'no')).join(', '))+'</title></circle>';
+ for(let n=0;n<=2;n++){let y=T+(H-T-B)*n/2;content+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="#edf0f4"/><text x="35" y="'+(y+4)+'" text-anchor="end" fill="#8893a3" font-size="10">'+(100-n*50)+'%</text>'}
+ const latest={};
+ for(const point of data.points){
+   latest[point.provider]=point;
+   const x=L+(point.timestamp-data.start)/(data.end-data.start)*(W-L-R),y=T+(1-point.rate)*(H-T-B);
+   const target=point.target===null?'unknown':Math.round(point.target*100)+'%';
+   content+='<circle cx="'+x+'" cy="'+y+'" r="4" opacity=".8" fill="'+colors[providers.indexOf(point.provider)%colors.length]+'"><title>'+esc(point.provider+' · '+(point.rate*100).toFixed(1)+'% observed ('+point.successes+'/'+point.samples+') · target '+target+' · settings '+point.config_revision+' · '+point.query+' · '+Object.entries(point.feedback).map(([k,v])=>(OUTCOMES[k]||k)+': '+(v?'yes':'no')).join(', '))+'</title></circle>';
  }
-
+ if(!data.points.length)content+='<text x="550" y="65" text-anchor="middle" fill="#8893a3" font-size="12">No observed feedback for this outcome/category in the last 60s</text>';
  ['60s ago','30s ago','Now'].forEach((label,i)=>content+='<text x="'+(L+(W-L-R)*i/2)+'" y="'+(H-3)+'" text-anchor="'+(i===0?'start':i===2?'end':'middle')+'" fill="#8893a3" font-size="10">'+label+'</text>');
  $('chart').innerHTML=content;
- $('legend').innerHTML=providers.map((p,i)=>'<span><i style="background:'+colors[i%colors.length]+'"></i>'+esc(p)+'</span>').join('');
+ $('legend').innerHTML=providers.filter(p=>latest[p]).map(p=>'<span title="Target '+(data.targets[p]==null?'unknown':Math.round(data.targets[p]*100)+'%')+'"><i style="background:'+colors[providers.indexOf(p)%colors.length]+'"></i>'+esc(p)+' '+Math.round(latest[p].rate*100)+'%</span>').join('');
 }
 </script></body></html>
