@@ -10,9 +10,12 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
 
+from searchhacks_types.search_provider import SearchProvider
+
 from ninja import Router
 from ninja.errors import HttpError
 
+PROVIDERS = [provider.value for provider in SearchProvider]
 FIELDS = ("purchase_conversion", "user_confirmed_outcome", "user_stopped_following_up")
 router = Router(tags=["simulation"])
 DB = Path(__file__).resolve().parents[1] / "db.sqlite3"
@@ -23,7 +26,7 @@ _active = {}
 DEFAULT = {
     "total_queries": 500,
     "rate_per_second": 2,
-    "providers": ["exa", "parallel", "brave"],
+    "providers": PROVIDERS,
     "categories": [
         {"id": 18, "label": "Shopping", "weight": 5, "queries": [
             {"text": "best running shoes for flat feet", "weight": 3},
@@ -80,6 +83,12 @@ def db():
         conn.close()
 
 def normalize(config):
+    # Provider availability follows the shared universe, including saved older configs.
+    config["providers"] = list(PROVIDERS)
+    for category in config["categories"]:
+        rates = config["success_rates"].setdefault(str(category["id"]), {})
+        for provider in PROVIDERS:
+            rates.setdefault(provider, {"user_confirmed_outcome": 0.5})
     for rates in config["success_rates"].values():
         for provider, value in rates.items():
             if isinstance(value, (int, float)):

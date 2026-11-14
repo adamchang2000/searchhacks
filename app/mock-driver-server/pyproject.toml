@@ -3,7 +3,7 @@ name = "mock-driver-server"
 version = "0.1.0"
 description = "SearchHacks mock-driver control API"
 requires-python = ">=3.13"
-dependencies = ["django>=5.2", "django-ninja>=1.4", "python-dotenv>=1.1", "uvicorn>=0.34"]
+dependencies = ["django>=5.2", "django-ninja>=1.4", "python-dotenv>=1.1", "uvicorn>=0.34", "searchhacks-types"]
 [project.scripts]
 mock-driver-server = "mock_driver_server.bin:main"
 [build-system]
@@ -11,3 +11,6 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["mock_driver_server"]
+
+[tool.uv.sources]
+searchhacks-types = { path = "../../lib/types", editable = true }
