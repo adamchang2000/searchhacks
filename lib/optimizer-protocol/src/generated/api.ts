@@ -163,10 +163,14 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * SearchProvider
+         * @enum {string}
+         */
+        SearchProvider: "brave" | "ceramic" | "exa" | "linkup" | "parallel" | "perplexity" | "seltz" | "serpapi" | "tavily" | "tinyfish" | "you";
         /** WhichSearchResponse */
         WhichSearchResponse: {
-            /** Provider */
-            provider: string;
+            provider: components["schemas"]["SearchProvider"];
             /**
              * Feedback Token
              * Format: uuid
@@ -178,7 +182,7 @@ export interface components {
             /** Query */
             query: string;
             /** Available Providers */
-            available_providers: string[];
+            available_providers: components["schemas"]["SearchProvider"][];
             /** Override Query Category */
             override_query_category?: number | null;
         };

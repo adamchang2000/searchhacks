@@ -37,7 +37,8 @@ in `config/dev-secrets.env`. If jev is unconfigured or fails, the query is route
 Each `Search` row stores `category_l1`, `category_l2`, and `category_source` (`override`, the jev
 model version, or `unclassified`), so stats can be recomputed if the classifier changes.
 
-**Policy** (`src/lib/optimizer/policy.py`): hierarchical Thompson sampling.
+**Policy** (`src/lib/optimizer/policy.py`): hierarchical Thompson sampling. See
+[POLICY_PRIMERS.md](POLICY_PRIMERS.md) for a worked example and how it learns over time.
 - P(`is_good`) per (cell, provider) is a Beta posterior. Cells nest: global -> L1 -> L2.
 - A cell's prior is its parent's posterior, scaled down to at most `PRIOR_STRENGTH` (20)
   pseudo-observations. A sparse subcategory therefore behaves like its parent category (most

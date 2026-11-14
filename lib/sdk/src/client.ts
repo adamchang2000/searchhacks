@@ -8,6 +8,7 @@ import {
   createOptimizerClient,
   type OptimizerClient,
 } from "@searchhacks/optimizer-protocol";
+import type { SearchProvider as ProviderSlug } from "@searchhacks/types/search-provider";
 import type { SearchProvider, SearchResult } from "./providers/types.ts";
 
 export interface SearchHacksClientOptions {
@@ -28,7 +29,7 @@ export interface SearchOptions {
 export interface SearchResponse {
   /** Pass this back to `submitFeedback()`. */
   feedbackToken: string;
-  provider: string;
+  provider: ProviderSlug;
   results: SearchResult[];
 }
 
@@ -40,7 +41,7 @@ export interface SearchResponse {
  */
 export class SearchHacksClient {
   private readonly api: OptimizerClient;
-  private readonly providers: Map<string, SearchProvider>;
+  private readonly providers: Map<ProviderSlug, SearchProvider>;
 
   constructor(options: SearchHacksClientOptions) {
     if (options.providers.length === 0) {

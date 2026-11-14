@@ -1,6 +1,44 @@
 import uuid
 
 from django.db import models
+from django.db.models import BooleanField, Case, OuterRef, Q, Subquery, Value, When
+
+# Outcome fields a feedback submission may report (see api/optimizer.py FeedbackRecord).
+OUTCOME_FIELDS = ("purchase_conversion", "user_confirmed_outcome", "user_stopped_following_up")
+
+
+class SearchQuerySet(models.QuerySet):
+    def with_latest_feedback(self) -> "SearchQuerySet":
+        """Annotate each search with its latest feedback submission:
+
+            latest_<outcome>     that submission's value for each outcome field
+            latest_feedback_at   when it was submitted
+            latest_good          True if any outcome is true, False if outcomes were reported
+                                 but none is true, None if the search has no feedback
+
+        All null if the search has no feedback. Feedback is an append-only log, so readers
+        should go through this rather than joining Feedback directly (a join would see every
+        submission, and count a search once per submission). Filter good / bad / none with
+        latest_good=True / latest_good=False / latest_good__isnull=True: CASE WHEN treats a
+        NULL outcome as "not this branch", where a plain `NOT (a OR b)` would turn NULL and
+        silently drop the row.
+        """
+        latest = Feedback.objects.filter(search=OuterRef("pk")).order_by("-id")
+        positive = Q(*(Q(**{f"latest_{f}": True}) for f in OUTCOME_FIELDS), _connector=Q.OR)
+        observed = Q(
+            *(Q(**{f"latest_{f}__isnull": False}) for f in OUTCOME_FIELDS), _connector=Q.OR
+        )
+        return self.annotate(
+            **{f"latest_{f}": Subquery(latest.values(f)[:1]) for f in OUTCOME_FIELDS},
+            latest_feedback_at=Subquery(latest.values("created_at")[:1]),
+        ).annotate(
+            latest_good=Case(
+                When(positive, then=Value(True)),
+                When(observed, then=Value(False)),
+                default=Value(None),
+                output_field=BooleanField(null=True),
+            )
+        )
 
 
 class Search(models.Model):
@@ -24,15 +62,19 @@ class Search(models.Model):
     # or "unclassified".
     category_source = models.CharField(max_length=64, default="unclassified")
 
+    objects = SearchQuerySet.as_manager()
+
     class Meta:
         ordering = ["-created_at"]
 
 
 class Feedback(models.Model):
-    """Feedback on one search's results. At most one per search; resubmitting overwrites."""
+    """One feedback submission for a search. Append-only: every submit_feedback call inserts
+    a row and nothing is updated. The latest row per search (highest id) is the one that
+    counts; read it via Search.objects.with_latest_feedback()."""
 
-    search = models.OneToOneField(Search, on_delete=models.CASCADE, related_name="feedback")
-    created_at = models.DateTimeField(auto_now=True)
+    search = models.ForeignKey(Search, on_delete=models.CASCADE, related_name="feedback_log")
+    created_at = models.DateTimeField(auto_now_add=True)
 
     # Placeholder signal until we decide what feedback really is.
     legacy_is_good = models.BooleanField(null=True, blank=True)
@@ -54,6 +96,9 @@ class SearchDistribution(models.Model):
     # Recompute skips writing a snapshot when both are unchanged.
     num_feedback = models.IntegerField()
     feedback_through = models.DateTimeField(null=True, blank=True)
+    # True while the snapshot has every cell. Older snapshots are thinned to the global and
+    # level-1 cells (all the dashboard's history needs), so history can span a whole run.
+    full = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["-id"]
@@ -75,3 +120,8 @@ class SearchDistributionCell(models.Model):
     provider = models.CharField(max_length=64)
     alpha = models.FloatField()
     beta = models.FloatField()
+    # Chance this provider wins the Thompson draw in this cell, among the providers in the
+    # snapshot (before EXPLORE_FLOOR). Sums to 1 over a cell's providers. For the dashboard.
+    p_best = models.FloatField(default=0.0)
+    # Feedback observed in exactly this cell for this provider (not inherited from parents).
+    n_obs = models.IntegerField(default=0)

@@ -16,6 +16,7 @@ def run(
     reload_url: Optional[str],
     force: bool,
     keep: int,
+    keep_history: int = 2000,
 ) -> None:
     from optimizer_server.src.config.initialize import initialize_django
     from optimizer_server.src.manage.config import load_for_db_administration
@@ -30,7 +31,9 @@ def run(
     while True:
         started = time.monotonic()
         try:
-            dist = distribution.compute_and_save(force=force, keep=keep)
+            dist = distribution.compute_and_save(
+                force=force, keep=keep, keep_history=keep_history
+            )
             if dist is None:
                 logger.info("no new feedback; snapshot unchanged")
             else:

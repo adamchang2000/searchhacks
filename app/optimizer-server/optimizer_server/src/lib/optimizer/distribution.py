@@ -12,6 +12,8 @@ workers, each would need to poll for the latest snapshot id instead.
 
 import logging
 import threading
+
+import numpy as np
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Iterable, Optional, Set, Tuple
@@ -57,7 +59,7 @@ def compute(counts: Dict[CellKey, Counts]) -> Dict[Cell, Dict[str, Beta]]:
     Feedback for providers outside SearchProvider (e.g. old test rows) is ignored: which_search
     no longer accepts them, so their posteriors could never be used.
     """
-    counts = {k: c for k, c in counts.items() if k[2] in _KNOWN_PROVIDERS}
+    counts = _known(counts)
     global_c: Dict[str, Counts] = {}
     l1_c: Dict[Tuple[int, str], Counts] = {}
     l2_c: Dict[Tuple[int, int, str], Counts] = {}
@@ -84,13 +86,69 @@ def compute(counts: Dict[CellKey, Counts]) -> Dict[Cell, Dict[str, Beta]]:
     return out
 
 
+def _known(counts: Dict[CellKey, Counts]) -> Dict[CellKey, Counts]:
+    return {k: c for k, c in counts.items() if k[2] in _KNOWN_PROVIDERS}
+
+
+def own_counts(counts: Dict[CellKey, Counts]) -> Dict[Tuple[Cell, str], int]:
+    """Feedback observed at each cell itself, per provider: all of it for the global cell,
+    the category's for a level-1 cell, the pair's for a level-2 cell. Not the inherited prior."""
+    out: Dict[Tuple[Cell, str], int] = {}
+
+    def add(cell: Cell, p: str, n: int) -> None:
+        out[(cell, p)] = out.get((cell, p), 0) + n
+
+    for (c1, c2, p), c in _known(counts).items():
+        add(GLOBAL, p, c.n)
+        if c1 is not None:
+            add((c1, None), p, c.n)
+            if c2 is not None:
+                add((c1, c2), p, c.n)
+    return out
+
+
+_GRID = (np.arange(4096) + 0.5) / 4096  # bin midpoints on (0, 1)
+_LOG_X, _LOG_1MX = np.log(_GRID), np.log1p(-_GRID)
+
+
+def p_best(by_provider: Dict[str, Beta]) -> Dict[str, float]:
+    """P(provider's draw is the highest) for one cell: the share of Thompson picks it gets
+    (before EXPLORE_FLOOR). Numerical integration on a fixed grid, so it is deterministic and
+    the dashboard's history doesn't jitter between snapshots.
+
+        P(i best) = sum_x pdf_i(x) * prod_{j != i} CDF_j(x)
+    """
+    names = list(by_provider)
+    if len(names) <= 1:
+        return {p: 1.0 for p in names}
+    a = np.array([by_provider[p].alpha for p in names])[:, None]
+    b = np.array([by_provider[p].beta for p in names])[:, None]
+    logpdf = (a - 1) * _LOG_X + (b - 1) * _LOG_1MX
+    pmf = np.exp(logpdf - logpdf.max(axis=1, keepdims=True))
+    pmf /= pmf.sum(axis=1, keepdims=True)
+    cdf = np.cumsum(pmf, axis=1) - pmf / 2  # mass strictly below each midpoint, half of ties
+    # prod_{j != i} cdf_j without dividing by zero: prefix and suffix products.
+    ones = np.ones((1, cdf.shape[1]))
+    prefix = np.cumprod(np.vstack([ones, cdf[:-1]]), axis=0)
+    suffix = np.cumprod(np.vstack([ones, cdf[::-1][:-1]]), axis=0)[::-1]
+    win = (pmf * prefix * suffix).sum(axis=1)
+    win /= win.sum()
+    return {p: float(w) for p, w in zip(names, win)}
+
+
 def _fingerprint() -> Tuple[int, Optional[datetime]]:
     agg = Feedback.objects.aggregate(n=Count("id"), through=Max("created_at"))
     return agg["n"], agg["through"]
 
 
-def compute_and_save(force: bool = False, keep: int = 20) -> Optional[SearchDistribution]:
-    """Write a new snapshot, or return None if no feedback changed since the latest one."""
+def compute_and_save(
+    force: bool = False, keep: int = 20, keep_history: int = 2000
+) -> Optional[SearchDistribution]:
+    """Write a new snapshot, or return None if no feedback changed since the latest one.
+
+    The newest `keep` snapshots stay full. Older ones, up to `keep_history`, are thinned to the
+    global and level-1 cells (the dashboard's history); anything older is deleted.
+    """
     n, through = _fingerprint()
     latest = SearchDistribution.objects.first()
     if (
@@ -100,7 +158,10 @@ def compute_and_save(force: bool = False, keep: int = 20) -> Optional[SearchDist
     ):
         return None
 
-    posteriors = compute(feedback_counts())
+    counts = feedback_counts()
+    posteriors = compute(counts)
+    observed = own_counts(counts)
+    wins = {cell: p_best(by_provider) for cell, by_provider in posteriors.items()}
     with transaction.atomic():
         dist = SearchDistribution.objects.create(num_feedback=n, feedback_through=through)
         SearchDistributionCell.objects.bulk_create(
@@ -112,14 +173,23 @@ def compute_and_save(force: bool = False, keep: int = 20) -> Optional[SearchDist
                     provider=p,
                     alpha=b.alpha,
                     beta=b.beta,
+                    p_best=wins[(l1, l2)][p],
+                    n_obs=observed.get(((l1, l2), p), 0),
                 )
                 for (l1, l2), by_provider in posteriors.items()
                 for p, b in by_provider.items()
             ],
             batch_size=2000,
         )
-        stale = SearchDistribution.objects.values_list("id", flat=True)[keep:]
-        SearchDistribution.objects.filter(id__in=list(stale)).delete()
+        ids = list(SearchDistribution.objects.values_list("id", flat=True)[: keep_history + 1])
+        if len(ids) > keep:
+            thin = SearchDistribution.objects.filter(id__lte=ids[keep], full=True)
+            SearchDistributionCell.objects.filter(
+                distribution__in=thin, category_l2__isnull=False
+            ).delete()
+            thin.update(full=False)
+        if len(ids) > keep_history:
+            SearchDistribution.objects.filter(id__lte=ids[keep_history]).delete()
     return dist
 
 
@@ -146,7 +216,7 @@ class LoadedDistribution:
 EMPTY = LoadedDistribution(id=None, created_at=None, num_feedback=0)
 
 _current: Optional[LoadedDistribution] = None
-_lock = threading.Lock()
+_lock = threading.RLock()  # reentrant: current() holds it while calling reload()
 
 
 def _load_latest() -> LoadedDistribution:
@@ -174,4 +244,7 @@ def reload() -> LoadedDistribution:
 def current() -> LoadedDistribution:
     """The in-memory snapshot. Loads it on first use, so a fresh server needs no reload call."""
     loaded = _current
-    return loaded if loaded is not None else reload()
+    if loaded is not None:
+        return loaded
+    with _lock:  # concurrent first requests: load once, not once per request
+        return _current if _current is not None else reload()

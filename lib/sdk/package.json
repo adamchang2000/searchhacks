@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@searchhacks/optimizer-protocol": "*"
+    "@searchhacks/optimizer-protocol": "*",
+    "@searchhacks/types": "*"
   },
   "devDependencies": {
     "typescript": "~5.8.0"

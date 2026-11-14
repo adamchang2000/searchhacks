@@ -334,11 +334,27 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "SearchProvider": {
+        "enum": [
+          "brave",
+          "ceramic",
+          "exa",
+          "linkup",
+          "parallel",
+          "perplexity",
+          "seltz",
+          "serpapi",
+          "tavily",
+          "tinyfish",
+          "you"
+        ],
+        "title": "SearchProvider",
+        "type": "string"
+      },
       "WhichSearchResponse": {
         "properties": {
           "provider": {
-            "title": "Provider",
-            "type": "string"
+            "$ref": "#/components/schemas/SearchProvider"
           },
           "feedback_token": {
             "format": "uuid",
@@ -361,7 +377,7 @@
           },
           "available_providers": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/SearchProvider"
             },
             "minItems": 1,
             "title": "Available Providers",

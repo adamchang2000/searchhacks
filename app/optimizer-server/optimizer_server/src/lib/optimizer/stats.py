@@ -4,21 +4,26 @@ from typing import Dict, List, Optional, Tuple
 
 from django.db.models import Count, Q
 
-from optimizer_server.src.apps.searches.models import Feedback, Search
+from optimizer_server.src.apps.searches.models import Search
 from optimizer_server.src.lib.optimizer.policy import Counts, ProviderStats
 
 CellKey = Tuple[Optional[int], Optional[int], str]  # (category_l1, category_l2, provider)
 
 
 def feedback_counts() -> Dict[CellKey, Counts]:
-    """good/bad counts per (category_l1, category_l2, provider), the finest level we route on."""
-    observed = Q(purchase_conversion__isnull=False) | Q(user_confirmed_outcome__isnull=False) | Q(user_stopped_following_up__isnull=False)
-    positive = Q(purchase_conversion=True) | Q(user_confirmed_outcome=True) | Q(user_stopped_following_up=True)
-    rows = Feedback.objects.filter(observed).values(
-        "search__category_l1", "search__category_l2", "search__provider"
-    ).annotate(n=Count("id"), good=Count("id", filter=positive))
+    """good/bad counts per (category_l1, category_l2, provider), the finest level we route on.
+
+    One vote per search, from its latest feedback submission; earlier submissions are ignored.
+    """
+    rows = (
+        Search.objects.with_latest_feedback()
+        .filter(latest_good__isnull=False)
+        .values("category_l1", "category_l2", "provider")
+        .annotate(n=Count("id"), good=Count("id", filter=Q(latest_good=True)))
+        .order_by()
+    )
     return {
-        (r["search__category_l1"], r["search__category_l2"], r["search__provider"]): Counts(
+        (r["category_l1"], r["category_l2"], r["provider"]): Counts(
             good=r["good"], bad=r["n"] - r["good"]
         )
         for r in rows

@@ -73,7 +73,7 @@ async function worker() {
       const res = await client.search(`synthetic ${label(category)} query #${i}`, {
         overrideQueryCategory: category,
       });
-      const provider = res.provider as SearchProvider;
+      const provider = res.provider;
       const isGood = Math.random() < truth.probGood(cell, provider);
       good += Number(isGood);
       await client.submitFeedback(res.feedbackToken, { user_confirmed_outcome: isGood });

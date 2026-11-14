@@ -20,14 +20,13 @@ from optimizer_server.src.lib.optimizer import categories, choose_provider, dist
 
 router = Router(tags=["optimizer"])
 
-# Provider names a caller may offer: the Telem slugs in lib/types SearchProvider.
-KNOWN_PROVIDERS = frozenset(p.value for p in SearchProvider)
-
 
 class WhichSearchRequest(Schema):
     query: str
     # Providers the caller is able to dispatch to; the optimizer picks one of these.
-    available_providers: List[str] = Field(..., min_length=1)
+    # Typed with lib/types SearchProvider, so the OpenAPI schema (and the generated TS in
+    # lib/optimizer-protocol) carries the provider enum and unknown names are rejected (422).
+    available_providers: List[SearchProvider] = Field(..., min_length=1)
     # Google Trends category id (lib/types QueryCategory) to use instead of classifying the
     # query. For callers that already know the category, e.g. the mock driver, so that
     # synthetic traffic doesn't pay for classification.
@@ -35,7 +34,7 @@ class WhichSearchRequest(Schema):
 
 
 class WhichSearchResponse(Schema):
-    provider: str
+    provider: SearchProvider
     # Opaque; pass it back to submit_feedback.
     feedback_token: UUID
 
@@ -58,12 +57,6 @@ class SubmitFeedbackResponse(Schema):
 
 @router.post("/which_search", response=WhichSearchResponse)
 def which_search(request, body: WhichSearchRequest):
-    unknown = sorted({p for p in body.available_providers if p not in KNOWN_PROVIDERS})
-    if unknown:
-        raise HttpError(
-            422,
-            f"unknown providers: {', '.join(unknown)}. Known: {', '.join(sorted(KNOWN_PROVIDERS))}",
-        )
     if body.override_query_category is not None:
         if not categories.is_known(body.override_query_category):
             raise HttpError(422, f"unknown query category: {body.override_query_category}")
@@ -81,10 +74,11 @@ def which_search(request, body: WhichSearchRequest):
     # Hot path: look up the precomputed posteriors (in memory) and Thompson-sample. No feedback
     # aggregation here; `optimizer-recompute` refreshes the snapshot out of band.
     cell = distribution.current().cell(l1, l2)
-    provider = choose_provider(body.available_providers, cell)
+    available = [p.value for p in body.available_providers]
+    provider = choose_provider(available, cell)
     search = Search.objects.create(
         query=body.query,
-        available_providers=body.available_providers,
+        available_providers=available,
         provider=provider,
         category_l1=l1,
         category_l2=l2,
@@ -99,5 +93,6 @@ def submit_feedback(request, body: SubmitFeedbackRequest):
     updates = body.feedback.model_dump(exclude_unset=True)
     if not updates or any(value is None for value in updates.values()):
         raise HttpError(422, "Supply at least one observed boolean outcome; omit unknown fields")
-    Feedback.objects.update_or_create(search=search, defaults=updates)
+    # Append-only: every submission is a new row; readers use the latest one per search.
+    Feedback.objects.create(search=search, **updates)
     return {"ok": True}

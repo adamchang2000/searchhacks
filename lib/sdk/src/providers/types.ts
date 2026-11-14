@@ -1,3 +1,5 @@
+import type { SearchProvider as ProviderSlug } from "@searchhacks/types/search-provider";
+
 export interface SearchResult {
   title: string;
   url: string;
@@ -6,7 +8,7 @@ export interface SearchResult {
 
 /** A backend that can actually execute a web search (telem, mocks, ...). */
 export interface SearchProvider {
-  /** Stable identifier; this is what the optimizer routes on. */
-  readonly name: string;
+  /** Telem provider slug (lib/types SearchProvider); this is what the optimizer routes on. */
+  readonly name: ProviderSlug;
   search(query: string): Promise<SearchResult[]>;
 }

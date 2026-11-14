@@ -54,7 +54,7 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
 | Endpoint | Request | Response |
 |---|---|---|
 | `POST /api/which_search` | `{query, available_providers: string[], override_query_category?: int}` | `{provider, feedback_token}` |
-| `POST /api/submit_feedback` | `{feedback_token, is_good: bool}` | `{ok}` |
+| `POST /api/submit_feedback` | `{feedback_token, feedback: {purchase_conversion?, user_confirmed_outcome?, user_stopped_following_up?}}` (bools) | `{ok}` |
 
 1. The caller sends the query and the providers it can dispatch to. The optimizer classifies the
    query into a Google Trends category (via jev), picks a provider for that category, and returns
@@ -63,10 +63,10 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
    `available_providers` must be Telem slugs from `lib/types` `SearchProvider`; any other name
    returns 422.
 2. The caller dispatches the query to `provider` itself.
-3. The caller reports `is_good` with that token. One feedback per token; resubmitting overwrites.
-   An unknown token returns 404.
-
-`is_good` is a placeholder until we decide what feedback really is.
+3. The caller reports whichever outcomes it observed with that token (at least one). A search
+   counts as good if any reported outcome is `true`. A token can receive feedback any number of
+   times: every submission is appended as a new row, and **only the latest one counts** (outcomes
+   it omits are not carried over from earlier submissions). An unknown token returns 404.
 
 Dashboard endpoints live under `/api/ui/` (`GET /api/ui/searches` (filterable, paginated), `GET /api/ui/stats/providers`,
 `GET /api/ui/stats/traffic` (searches per time bucket by provider)).

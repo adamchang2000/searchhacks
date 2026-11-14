@@ -23,7 +23,15 @@ def main():
     parser.add_argument(
         "--force", action="store_true", help="Write a snapshot even if no feedback changed."
     )
-    parser.add_argument("--keep", type=int, default=20, help="Snapshots to keep (default 20).")
+    parser.add_argument(
+        "--keep", type=int, default=20, help="Snapshots to keep in full (default 20)."
+    )
+    parser.add_argument(
+        "--keep-history",
+        type=int,
+        default=2000,
+        help="Snapshots to keep at all; older than --keep are thinned to global + level-1 cells.",
+    )
     args = parser.parse_args()
 
     if args.config is not None and os.environ.get("CONFIG") is not None:
@@ -41,6 +49,7 @@ def main():
         reload_url=args.reload_url or None,
         force=args.force,
         keep=args.keep,
+        keep_history=args.keep_history,
     )
 
 

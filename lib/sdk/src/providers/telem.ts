@@ -1,3 +1,4 @@
+import type { SearchProvider as ProviderSlug } from "@searchhacks/types/search-provider";
 import type { SearchProvider, SearchResult } from "./types.ts";
 
 export interface TelemProviderOptions {
@@ -5,14 +6,14 @@ export interface TelemProviderOptions {
   baseUrl?: string;
   numResults?: number;
   /** Underlying Telem provider slug, such as exa or brave. */
-  provider: string;
+  provider: ProviderSlug;
 }
 
 type TelemRun = { output_payload?: Record<string, unknown> | null };
 type TelemResponse = { preprocessor_runs?: TelemRun[] };
 
 export class TelemProvider implements SearchProvider {
-  readonly name: string;
+  readonly name: ProviderSlug;
 
   constructor(private readonly options: TelemProviderOptions) {
     this.name = options.provider;
