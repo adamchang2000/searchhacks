@@ -30,15 +30,15 @@ EXPLORE_FLOOR = 0.05
 
 @dataclass(frozen=True)
 class Counts:
-    good: int = 0
-    bad: int = 0
-
-    @property
-    def n(self) -> int:
-        return self.good + self.bad
+    # Weighted evidence (lib/optimizer/outcomes.py): one search can add e.g. 2.0 good, or
+    # 1.0 good and 0.5 bad. Fractional counts are fine for a Beta update.
+    good: float = 0.0
+    bad: float = 0.0
+    # Number of searches with feedback behind that evidence.
+    searches: int = 0
 
     def __add__(self, other: "Counts") -> "Counts":
-        return Counts(self.good + other.good, self.bad + other.bad)
+        return Counts(self.good + other.good, self.bad + other.bad, self.searches + other.searches)
 
 
 @dataclass

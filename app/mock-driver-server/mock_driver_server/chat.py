@@ -70,7 +70,8 @@ user_confirmed_outcome: whether the user explicitly confirms reaching their goal
 user_stopped_following_up: whether follow-ups stopped after more than one search query.
 Only supply observed booleans. Omit unknown fields; never turn absence of evidence into false.
 You cannot infer that follow-ups stopped merely from silence. This requires explicit evidence
-and more than one prior search. Later calls can update individual observed fields.
+and more than one prior search. Only the latest call for a token counts, so a later call must
+repeat every field observed so far (omitted fields are treated as unknown).
 Include evidence grounded in the user's response. Relevant-looking results alone are not an
 outcome. Silence, unrelated replies, and ambiguous follow-ups are insufficient: leave pending.
 Never grade a search created in the current turn. Cite source URLs. Never invent outcomes."""

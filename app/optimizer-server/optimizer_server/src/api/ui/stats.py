@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from django.utils import timezone
 from ninja import Router, Schema
 
-from optimizer_server.src.apps.searches.models import OUTCOME_FIELDS, Search
+from optimizer_server.src.apps.searches.models import Search
 from optimizer_server.src.lib.optimizer.stats import compute_provider_stats
 
 router = Router()
@@ -69,11 +69,9 @@ def traffic(request, minutes: int = 60, bucket_seconds: int = 60):
     ]
     # Latest feedback submission per search (a plain join would repeat a search per submission).
     rows = Search.objects.filter(created_at__gte=start).with_latest_feedback().values_list(
-        "created_at", "provider", *(f"latest_{f}" for f in OUTCOME_FIELDS)
+        "created_at", "provider", "latest_good"
     )
-    for created_at, provider, purchase, confirmed, stopped in rows.iterator():
-        observed = [value for value in (purchase, confirmed, stopped) if value is not None]
-        success = any(observed) if observed else None
+    for created_at, provider, success in rows.iterator():
         i = (int(created_at.timestamp()) - first_start) // bucket_seconds
         if not 0 <= i < n:
             continue

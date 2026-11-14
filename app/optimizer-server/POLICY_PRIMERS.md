@@ -8,7 +8,7 @@ Every number below came from running that code (`PRIOR_STRENGTH = 20`, `EXPLORE_
 ## The problem
 
 Each query arrives with a category (e.g. Finance › Investing) and a list of providers we may use.
-We pick one, and later learn whether the results were good (`is_good`). We want to:
+We pick one, and later get feedback on how the search went. We want to:
 
 - **exploit**: send most traffic to whichever provider is best for this kind of query, and
 - **explore**: keep trying the others, because we might be wrong, especially early on.
@@ -19,8 +19,22 @@ hierarchy.
 
 ## 1. One belief per provider: the Beta distribution
 
-For a provider in some context, we track `good` and `bad` feedback counts and turn them into a
-belief about its true success rate: **Beta(1 + good, 1 + bad)**.
+For a provider in some context, we track `good` and `bad` evidence and turn it into a belief
+about its true success rate: **Beta(1 + good, 1 + bad)**.
+
+**Where good and bad come from.** Feedback reports up to three outcomes, and each one adds
+weighted evidence (`lib/optimizer/outcomes.py`):
+
+| outcome | true | false |
+|---|---|---|
+| `purchase_conversion` | +2 good | +0.5 bad |
+| `user_confirmed_outcome` | +1 good | +1 bad |
+| `user_stopped_following_up` | +0.25 good | +0.25 bad |
+
+So a confirmed search adds 1 good, a purchase adds 2 good (it's stronger evidence), and a search
+with a purchase but a "didn't reach my goal" adds 2 good and 1 bad. Unreported outcomes add
+nothing, and only a search's latest feedback submission counts. The examples below use whole
+numbers for readability, as if every search were graded with `user_confirmed_outcome`.
 
 - Its **mean**, `alpha / (alpha + beta)`, is roughly the observed good-rate.
 - Its **width** shrinks as evidence grows. Beta(3, 1) and Beta(30, 10) both have mean 0.75,
@@ -161,8 +175,6 @@ for providers that rarely get traffic.
 
 - **Forget.** Counts never decay, so a provider that was bad last week stays penalized by old
   data. Fix: decay or window the counts.
-- **Weigh cost or latency.** It maximizes P(`is_good`) only.
-- **Use richer feedback.** `is_good` is a placeholder. A graded score would still fit, with
-  fractional good/bad updates.
+- **Weigh cost or latency.** It maximizes P(good) only.
 - **Merge DAG parents.** A subcategory under two categories (e.g. Sports News under News and
   Sports) learns separately under each.

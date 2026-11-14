@@ -103,11 +103,11 @@ def own_counts(counts: Dict[CellKey, Counts]) -> Dict[Tuple[Cell, str], int]:
         out[(cell, p)] = out.get((cell, p), 0) + n
 
     for (c1, c2, p), c in _known(counts).items():
-        add(GLOBAL, p, c.n)
+        add(GLOBAL, p, c.searches)
         if c1 is not None:
-            add((c1, None), p, c.n)
+            add((c1, None), p, c.searches)
             if c2 is not None:
-                add((c1, c2), p, c.n)
+                add((c1, c2), p, c.searches)
     return out
 
 

@@ -1,10 +1,12 @@
 import uuid
 
 from django.db import models
-from django.db.models import BooleanField, Case, OuterRef, Q, Subquery, Value, When
+from django.db.models import BooleanField, Case, F, FloatField, OuterRef, Q, Subquery, Value, When
+
+from optimizer_server.src.lib.optimizer.outcomes import OUTCOME_WEIGHTS
 
 # Outcome fields a feedback submission may report (see api/optimizer.py FeedbackRecord).
-OUTCOME_FIELDS = ("purchase_conversion", "user_confirmed_outcome", "user_stopped_following_up")
+OUTCOME_FIELDS = tuple(OUTCOME_WEIGHTS)
 
 
 class SearchQuerySet(models.QuerySet):
@@ -13,8 +15,10 @@ class SearchQuerySet(models.QuerySet):
 
             latest_<outcome>     that submission's value for each outcome field
             latest_feedback_at   when it was submitted
-            latest_good          True if any outcome is true, False if outcomes were reported
-                                 but none is true, None if the search has no feedback
+            latest_good_weight   evidence it was good: sum of OUTCOME_WEIGHTS for true outcomes
+            latest_bad_weight    evidence it was bad: sum of OUTCOME_WEIGHTS for false outcomes
+            latest_good          True if good weight > bad weight, False otherwise, None if the
+                                 search has no feedback (lib/optimizer/outcomes.py)
 
         All null if the search has no feedback. Feedback is an append-only log, so readers
         should go through this rather than joining Feedback directly (a join would see every
@@ -24,19 +28,41 @@ class SearchQuerySet(models.QuerySet):
         silently drop the row.
         """
         latest = Feedback.objects.filter(search=OuterRef("pk")).order_by("-id")
-        positive = Q(*(Q(**{f"latest_{f}": True}) for f in OUTCOME_FIELDS), _connector=Q.OR)
         observed = Q(
             *(Q(**{f"latest_{f}__isnull": False}) for f in OUTCOME_FIELDS), _connector=Q.OR
         )
-        return self.annotate(
-            **{f"latest_{f}": Subquery(latest.values(f)[:1]) for f in OUTCOME_FIELDS},
-            latest_feedback_at=Subquery(latest.values("created_at")[:1]),
-        ).annotate(
-            latest_good=Case(
-                When(positive, then=Value(True)),
-                When(observed, then=Value(False)),
-                default=Value(None),
-                output_field=BooleanField(null=True),
+
+        def weight(value: bool, attr: str):
+            # Sum over outcomes of that outcome's weight when it equals `value`; NULL adds 0.
+            terms = [
+                Case(
+                    When(**{f"latest_{f}": value}, then=Value(getattr(w, attr))),
+                    default=Value(0.0),
+                    output_field=FloatField(),
+                )
+                for f, w in OUTCOME_WEIGHTS.items()
+            ]
+            total = terms[0]
+            for t in terms[1:]:
+                total = total + t
+            return total
+
+        return (
+            self.annotate(
+                **{f"latest_{f}": Subquery(latest.values(f)[:1]) for f in OUTCOME_FIELDS},
+                latest_feedback_at=Subquery(latest.values("created_at")[:1]),
+            )
+            .annotate(
+                latest_good_weight=weight(True, "good_if_true"),
+                latest_bad_weight=weight(False, "bad_if_false"),
+            )
+            .annotate(
+                latest_good=Case(
+                    When(observed & Q(latest_good_weight__gt=F("latest_bad_weight")), then=Value(True)),
+                    When(observed, then=Value(False)),
+                    default=Value(None),
+                    output_field=BooleanField(null=True),
+                )
             )
         )
 

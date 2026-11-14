@@ -63,10 +63,13 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
    `available_providers` must be Telem slugs from `lib/types` `SearchProvider`; any other name
    returns 422.
 2. The caller dispatches the query to `provider` itself.
-3. The caller reports whichever outcomes it observed with that token (at least one). A search
-   counts as good if any reported outcome is `true`. A token can receive feedback any number of
-   times: every submission is appended as a new row, and **only the latest one counts** (outcomes
-   it omits are not carried over from earlier submissions). An unknown token returns 404.
+3. The caller reports whichever outcomes it observed with that token (at least one). Each
+   reported outcome adds weighted evidence that the search was good or bad
+   (`purchase_conversion` true +2 good / false +0.5 bad, `user_confirmed_outcome` +1 / +1,
+   `user_stopped_following_up` +0.25 / +0.25; see `app/optimizer-server/optimizer_server/src/lib/optimizer/outcomes.py`).
+   A token can receive feedback any number of times: every submission is appended as a new row,
+   and **only the latest one counts**, so each submission should include every outcome observed
+   so far (omitted ones are not carried over). An unknown token returns 404.
 
 Full endpoint reference (protocol, admin, dashboard): [`lib/optimizer-protocol/API_REFERENCE.md`](lib/optimizer-protocol/API_REFERENCE.md).
 

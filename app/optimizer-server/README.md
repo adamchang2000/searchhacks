@@ -39,7 +39,8 @@ model version, or `unclassified`), so stats can be recomputed if the classifier 
 
 **Policy** (`src/lib/optimizer/policy.py`): hierarchical Thompson sampling. See
 [POLICY_PRIMERS.md](POLICY_PRIMERS.md) for a worked example and how it learns over time.
-- P(`is_good`) per (cell, provider) is a Beta posterior. Cells nest: global -> L1 -> L2.
+- P(good) per (cell, provider) is a Beta posterior, updated with weighted outcome evidence
+  (`src/lib/optimizer/outcomes.py`). Cells nest: global -> L1 -> L2.
 - A cell's prior is its parent's posterior, scaled down to at most `PRIOR_STRENGTH` (20)
   pseudo-observations. A sparse subcategory therefore behaves like its parent category (most
   traffic to the parent's best providers: the "narrow to the top few" idea, without a hard
