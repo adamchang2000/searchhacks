@@ -1,0 +1,14 @@
+[project]
+name = "searchhacks-types"
+version = "0.1.0"
+description = "Shared SearchHacks types (Python side of lib/types)"
+requires-python = ">=3.13"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Each <type>/python/ directory becomes searchhacks_types.<type>.
+[tool.hatch.build.targets.wheel.force-include]
+"query-category/python" = "searchhacks_types/query_category"
+"search-provider/python" = "searchhacks_types/search_provider"

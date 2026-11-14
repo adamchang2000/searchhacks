@@ -1,4 +1,4 @@
-.PHONY: all install generate-api typecheck server ui mock-driver migrate
+.PHONY: all install generate-api typecheck check-types server ui mock-driver migrate
 
 all: generate-api
 
@@ -12,6 +12,10 @@ generate-api:
 
 typecheck:
 	npm run typecheck
+
+# Check lib/types Python and TypeScript definitions match.
+check-types:
+	python3 lib/types/check_sync.py
 
 migrate:
 	cd app/optimizer-server && uv run optimizer-manage --config config/dev.json -- migrate

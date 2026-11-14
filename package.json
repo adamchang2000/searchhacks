@@ -4,6 +4,7 @@
   "workspaces": [
     "lib/optimizer-protocol",
     "lib/sdk",
+    "lib/types",
     "app/optimizer-ui",
     "app/mock-driver"
   ],

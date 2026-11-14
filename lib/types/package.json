@@ -1,0 +1,16 @@
+{
+  "name": "@searchhacks/types",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./query-category": "./query-category/typescript/index.ts",
+    "./search-provider": "./search-provider/typescript/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.0"
+  }
+}

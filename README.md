@@ -40,6 +40,7 @@ in telem properly. this is so we can generate real traces for the demo
 ├── package.json                  # npm workspaces for all TS packages
 ├── lib/
 │   ├── optimizer-protocol/       # OpenAPI schema + generated TS types + typed client
+│   ├── types/                    # shared cross-language types (Python + TS), see lib/types/README.md
 │   └── sdk/                      # SearchHacksClient, SearchProvider interface, telem provider, tool defs
 └── app/
     ├── optimizer-server/         # Django + django-ninja (uv); routing policy in src/lib/optimizer
@@ -87,6 +88,7 @@ After changing any API schema on the server, run `make generate-api` and commit 
 | `make install` | `uv sync` the optimizer server + `npm install` all workspaces |
 | `make generate-api` | Export the OpenAPI schema from the server, regenerate TS types in `lib/optimizer-protocol` |
 | `make typecheck` | Typecheck every TS workspace |
+| `make check-types` | Check that every `lib/types` type is identical in Python and TypeScript |
 | `make migrate` | Apply Django migrations to the local dev DB |
 | `make server` | Run the optimizer server locally with auto-reload (port 8000) |
 | `make ui` | Run the dashboard dev server (port 5173) |
