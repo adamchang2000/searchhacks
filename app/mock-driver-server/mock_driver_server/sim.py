@@ -211,3 +211,25 @@ def events(request, run_id: UUID, limit: int = 100):
     with db() as conn:
         return [dict(row) for row in conn.execute("SELECT * FROM sim_events WHERE run_id=? ORDER BY id DESC LIMIT ?",
                                                  (str(run_id), max(1, min(limit, 500))))]
+
+@router.get("/timeseries")
+def timeseries(request, run_id: UUID):
+    end = int(time.time())
+    start = end - 59
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT CAST(strftime('%s', created_at) AS INTEGER) AS second,
+                      COALESCE(provider, 'unrouted') AS provider, COUNT(*) AS n
+               FROM sim_events WHERE run_id=? AND created_at >= ?
+               GROUP BY second, provider""",
+            (str(run_id), datetime.fromtimestamp(start, timezone.utc).isoformat()),
+        ).fetchall()
+    buckets = {second: {} for second in range(start, end + 1)}
+    providers = set()
+    for row in rows:
+        if row["second"] in buckets:
+            buckets[row["second"]][row["provider"]] = row["n"]
+            providers.add(row["provider"])
+    return {"providers": sorted(providers), "buckets": [
+        {"second": second, "counts": counts} for second, counts in buckets.items()
+    ]}
