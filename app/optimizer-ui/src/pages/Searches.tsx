@@ -10,19 +10,11 @@ import { int, timeAgo } from "@/lib/format";
 const PAGE_SIZE = 50;
 type FeedbackFilter = "good" | "bad" | "none";
 
-function FeedbackBadge({ isGood }: { isGood: boolean | null }) {
-  const [label, icon, color] =
-    isGood == null
-      ? ["pending", "○", "var(--status-pending)"]
-      : isGood
-        ? ["good", "✓", "var(--status-good)"]
-        : ["bad", "✕", "var(--status-bad)"];
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color }}>
-      <span aria-hidden>{icon}</span>
-      {label}
-    </span>
-  );
+function FeedbackBadge({ feedback }: { feedback: SearchOut["feedback"] }) {
+  const entries = Object.entries(feedback ?? {}).filter(([, value]) => value != null);
+  if (!entries.length) return <span className="text-muted">pending</span>;
+  const labels: Record<string, string> = { purchase_conversion: "Purchase", user_confirmed_outcome: "Confirmed", user_stopped_following_up: "No follow-up" };
+  return <span className="inline-flex flex-wrap gap-2">{entries.map(([key, value]) => <span key={key} style={{color: value ? "var(--status-good)" : "var(--status-bad)"}}>{labels[key] ?? key}: {value ? "yes" : "no"}</span>)}</span>;
 }
 
 function Category({ s }: { s: SearchOut }) {
@@ -56,7 +48,7 @@ function Detail({ s }: { s: SearchOut }) {
     [
       "Feedback",
       <span className="inline-flex items-center gap-2">
-        <FeedbackBadge isGood={s.is_good} />
+        <FeedbackBadge feedback={s.feedback} />
         {s.feedback_at && <span className="text-muted text-xs">{new Date(s.feedback_at).toLocaleString()}</span>}
       </span>,
     ],
@@ -212,7 +204,7 @@ export function Searches() {
                     <Category s={s} />
                   </td>
                   <td className="px-4 py-2">
-                    <FeedbackBadge isGood={s.is_good} />
+                    <FeedbackBadge feedback={s.feedback} />
                   </td>
                 </tr>
                 {open === s.id && (

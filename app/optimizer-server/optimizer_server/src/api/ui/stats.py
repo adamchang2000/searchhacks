@@ -68,15 +68,17 @@ def traffic(request, minutes: int = 60, bucket_seconds: int = 60):
         for i in range(n)
     ]
     rows = Search.objects.filter(created_at__gte=start).values_list(
-        "created_at", "provider", "feedback__is_good"
+        "created_at", "provider", "feedback__purchase_conversion", "feedback__user_confirmed_outcome", "feedback__user_stopped_following_up"
     )
-    for created_at, provider, is_good in rows.iterator():
+    for created_at, provider, purchase, confirmed, stopped in rows.iterator():
+        observed = [value for value in (purchase, confirmed, stopped) if value is not None]
+        success = any(observed) if observed else None
         i = (int(created_at.timestamp()) - first_start) // bucket_seconds
         if not 0 <= i < n:
             continue
         b = buckets[i]
         b["by_provider"][provider] = b["by_provider"].get(provider, 0) + 1
-        key = "pending" if is_good is None else ("good" if is_good else "bad")
+        key = "pending" if success is None else ("good" if success else "bad")
         b[key] += 1
 
     return {"start": start, "end": now, "bucket_seconds": bucket_seconds, "buckets": buckets}

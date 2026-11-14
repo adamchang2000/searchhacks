@@ -5,10 +5,10 @@ import type { SearchHacksClient } from "./client.ts";
  * common `{ name, description, input_schema }` convention used by LLM tool-use APIs.
  */
 export const webSearchToolDefinition = {
-  name: "web_search",
+  name: "search",
   description:
     "Search the web. Returns a list of results with title, url, and snippet, plus a feedback_token. " +
-    "After using the results, call web_search_feedback with the feedback_token and whether the results were good.",
+    "Wait for the user response before calling search_feedback to assess whether this search led to their goal.",
   input_schema: {
     type: "object",
     properties: {
@@ -19,15 +19,20 @@ export const webSearchToolDefinition = {
 } as const;
 
 export const webSearchFeedbackToolDefinition = {
-  name: "web_search_feedback",
-  description: "Report whether a previous web_search returned good results.",
+  name: "search_feedback",
+  description: "After the user responds, grade whether a prior-turn search led to their goal. Leave ambiguous outcomes pending.",
   input_schema: {
     type: "object",
     properties: {
       feedback_token: { type: "string" },
-      is_good: { type: "boolean" },
+      feedback: { type: "object", properties: {
+        purchase_conversion: { type: "boolean" },
+        user_confirmed_outcome: { type: "boolean" },
+        user_stopped_following_up: { type: "boolean" },
+      }, additionalProperties: false, minProperties: 1 },
+      evidence: { type: "string", description: "Evidence from the subsequent user response." },
     },
-    required: ["feedback_token", "is_good"],
+    required: ["feedback_token", "feedback", "evidence"],
   },
 } as const;
 
@@ -40,10 +45,10 @@ export async function handleToolCall(
   switch (name) {
     case webSearchToolDefinition.name: {
       const res = await client.search(String(input.query));
-      return { feedback_token: res.feedbackToken, results: res.results };
+      return { feedback_token: res.feedbackToken, provider: res.provider, results: res.results };
     }
     case webSearchFeedbackToolDefinition.name: {
-      await client.submitFeedback(String(input.feedback_token), Boolean(input.is_good));
+      await client.submitFeedback(String(input.feedback_token), input.feedback as import("./client.ts").FeedbackRecord);
       return { ok: true };
     }
     default:

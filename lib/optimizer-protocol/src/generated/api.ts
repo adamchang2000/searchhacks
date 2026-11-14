@@ -147,6 +147,15 @@ export interface components {
             /** Ok */
             ok: boolean;
         };
+        /** FeedbackRecord */
+        FeedbackRecord: {
+            /** Purchase Conversion */
+            purchase_conversion?: boolean | null;
+            /** User Confirmed Outcome */
+            user_confirmed_outcome?: boolean | null;
+            /** User Stopped Following Up */
+            user_stopped_following_up?: boolean | null;
+        };
         /** SubmitFeedbackRequest */
         SubmitFeedbackRequest: {
             /**
@@ -154,8 +163,7 @@ export interface components {
              * Format: uuid
              */
             feedback_token: string;
-            /** Is Good */
-            is_good: boolean;
+            feedback: components["schemas"]["FeedbackRecord"];
         };
         /** SearchOut */
         SearchOut: {
@@ -181,8 +189,7 @@ export interface components {
             category_l2: number | null;
             /** Category Source */
             category_source: string;
-            /** Is Good */
-            is_good: boolean | null;
+            feedback: components["schemas"]["FeedbackRecord"] | null;
             /** Feedback At */
             feedback_at: string | null;
         };

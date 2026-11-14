@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 from ninja import Router
 from ninja.errors import HttpError
 
+FIELDS = ("purchase_conversion", "user_confirmed_outcome", "user_stopped_following_up")
 router = Router(tags=["simulation"])
 DB = Path(__file__).resolve().parents[1] / "db.sqlite3"
 OPTIMIZER = "https://optimizer.int.exe.xyz"
@@ -58,12 +59,24 @@ def db():
         id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, created_at TEXT NOT NULL,
         category_id INTEGER NOT NULL, query TEXT NOT NULL, provider TEXT,
         is_good INTEGER, error TEXT)""")
+    if "feedback" not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
+        conn.execute("ALTER TABLE sim_events ADD COLUMN feedback TEXT")
+    for column, kind in (("goodness", "REAL"), ("feedback_submitted_at", "TEXT")):
+        if column not in {row["name"] for row in conn.execute("PRAGMA table_info(sim_events)")}:
+            conn.execute("ALTER TABLE sim_events ADD COLUMN " + column + " " + kind)
     conn.execute("INSERT OR IGNORE INTO sim_config VALUES (1, ?)", (json.dumps(DEFAULT),))
     try:
         with conn:
             yield conn
     finally:
         conn.close()
+
+def normalize(config):
+    for rates in config["success_rates"].values():
+        for provider, value in rates.items():
+            if isinstance(value, (int, float)):
+                rates[provider] = {"user_confirmed_outcome": value}
+    return config
 
 def validate(config):
     if not isinstance(config, dict):
@@ -93,9 +106,12 @@ def validate(config):
                 if not isinstance(query["text"], str) or not query["text"].strip() or type(query["weight"]) not in (int, float) or query["weight"] <= 0:
                     raise ValueError("query text and positive weight are required")
             for provider in providers:
-                probability = rates[str(cat["id"])][provider]
-                if type(probability) not in (int, float) or not 0 <= probability <= 1:
-                    raise ValueError("success rates must be between 0 and 1")
+                record = rates[str(cat["id"])][provider]
+                if not isinstance(record, dict) or not record or any(k not in FIELDS for k in record):
+                    raise ValueError("Configure at least one outcome probability per provider")
+                for probability in record.values():
+                    if type(probability) not in (int, float) or not 0 <= probability <= 1:
+                        raise ValueError("Outcome probabilities must be between 0 and 1")
     except (KeyError, TypeError, ValueError) as exc:
         raise HttpError(400, str(exc))
     return config
@@ -108,10 +124,10 @@ def call(path, payload):
 
 def work(run_id, control):
     with db() as conn:
-        config = json.loads(conn.execute("SELECT config FROM sim_runs WHERE id=?", (run_id,)).fetchone()["config"])
+        config = normalize(json.loads(conn.execute("SELECT config FROM sim_runs WHERE id=?", (run_id,)).fetchone()["config"]))
     categories = config["categories"]
     try:
-        for _ in range(config["total_queries"]):
+        for query_index in range(config["total_queries"]):
             while not control["resume"].wait(timeout=0.2):
                 if control["stop"].is_set():
                     break
@@ -121,20 +137,27 @@ def work(run_id, control):
             query = random.choices(category["queries"], weights=[q["weight"] for q in category["queries"]])[0]["text"]
             with db() as conn:
                 conn.execute("UPDATE sim_runs SET issued=issued+1 WHERE id=?", (run_id,))
-            provider, good, error = None, None, None
+            provider, feedback, error = None, {}, None
+            goodness, submitted_at = random.random(), None
             try:
                 # The category is known, so skip the optimizer's (paid) jev classification and make
                 # it route on the same category that success_rates are keyed by.
                 route = call("/api/which_search", {"query": query, "available_providers": config["providers"],
                                                    "override_query_category": category["id"]})
                 provider = route["provider"]
-                good = random.random() < config["success_rates"][str(category["id"])][provider]
-                call("/api/submit_feedback", {"feedback_token": route["feedback_token"], "is_good": good})
+                probabilities = config["success_rates"][str(category["id"])][provider]
+                # Synthetic sessions contain three queries. Cessation is observed only at
+                # the end of a multi-query session; earlier searches leave it unknown.
+                feedback = {key: goodness >= 1 - probability for key, probability in probabilities.items()
+                            if key != "user_stopped_following_up" or query_index % 3 == 2}
+                if feedback:
+                    call("/api/submit_feedback", {"feedback_token": route["feedback_token"], "feedback": feedback})
+                    submitted_at = now()
             except Exception as exc:
                 error = str(exc)[:500]
             with db() as conn:
-                conn.execute("INSERT INTO sim_events (run_id,created_at,category_id,query,provider,is_good,error) VALUES (?,?,?,?,?,?,?)",
-                             (run_id, now(), category["id"], query, provider, None if good is None else int(good), error))
+                conn.execute("INSERT INTO sim_events (run_id,created_at,category_id,query,provider,feedback,error,goodness,feedback_submitted_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                             (run_id, now(), category["id"], query, provider, json.dumps(feedback), error, goodness, submitted_at))
                 conn.execute("UPDATE sim_runs SET completed=completed+1, errors=errors+? WHERE id=?",
                              (int(error is not None), run_id))
             if control["stop"].wait(1 / config["rate_per_second"]):
@@ -150,7 +173,7 @@ def work(run_id, control):
 @router.get("/scenario")
 def scenario(request):
     with db() as conn:
-        return json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"])
+        return normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"]))
 
 @router.put("/scenario")
 def save_scenario(request):
@@ -170,7 +193,7 @@ def start(request):
     with db() as conn:
         if conn.execute("SELECT 1 FROM sim_runs WHERE status IN ('running','paused','stopping') LIMIT 1").fetchone():
             raise HttpError(409, "A run is already active")
-        config = validate(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"]))
+        config = validate(normalize(json.loads(conn.execute("SELECT body FROM sim_config WHERE id=1").fetchone()["body"])))
         run_id = str(uuid4())
         conn.execute("INSERT INTO sim_runs (id,created_at,status,config) VALUES (?,?,?,?)",
                      (run_id, now(), "running", json.dumps(config)))
@@ -212,27 +235,22 @@ def change_run(request, run_id: UUID, action: str):
 @router.get("/events")
 def events(request, run_id: UUID, limit: int = 100):
     with db() as conn:
-        return [dict(row) for row in conn.execute("SELECT * FROM sim_events WHERE run_id=? ORDER BY id DESC LIMIT ?",
-                                                 (str(run_id), max(1, min(limit, 500))))]
+        rows = conn.execute("SELECT * FROM sim_events WHERE run_id=? ORDER BY id DESC LIMIT ?",
+                            (str(run_id), max(1, min(limit, 500)))).fetchall()
+        return [{**dict(row), "feedback": json.loads(row["feedback"]) if row["feedback"] else None} for row in rows]
 
 @router.get("/timeseries")
 def timeseries(request, run_id: UUID):
-    end = int(time.time())
-    start = end - 59
+    end = time.time()
+    start = end - 60
     with db() as conn:
         rows = conn.execute(
-            """SELECT CAST(strftime('%s', created_at) AS INTEGER) AS second,
-                      COALESCE(provider, 'unrouted') AS provider, COUNT(*) AS n
-               FROM sim_events WHERE run_id=? AND created_at >= ?
-               GROUP BY second, provider""",
+            """SELECT provider, query, goodness, feedback, feedback_submitted_at
+               FROM sim_events WHERE run_id=? AND feedback_submitted_at >= ?
+               AND goodness IS NOT NULL ORDER BY id""",
             (str(run_id), datetime.fromtimestamp(start, timezone.utc).isoformat()),
         ).fetchall()
-    buckets = {second: {} for second in range(start, end + 1)}
-    providers = set()
-    for row in rows:
-        if row["second"] in buckets:
-            buckets[row["second"]][row["provider"]] = row["n"]
-            providers.add(row["provider"])
-    return {"providers": sorted(providers), "buckets": [
-        {"second": second, "counts": counts} for second, counts in buckets.items()
-    ]}
+    points = [{"provider": row["provider"], "query": row["query"], "goodness": row["goodness"],
+               "feedback": json.loads(row["feedback"]),
+               "timestamp": datetime.fromisoformat(row["feedback_submitted_at"]).timestamp()} for row in rows]
+    return {"providers": sorted({p["provider"] for p in points}), "points": points, "start": start, "end": end}

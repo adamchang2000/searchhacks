@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SearchHacks · Chat</title><link rel="stylesheet" href="/assets/shared.css"></head>
+<body class="chat-page"><main>
+<aside class="chat-history" aria-label="Chats">
+<div class="sidebar-brand">SearchHacks</div>
+<button id="new-chat" class="new-chat"><span aria-hidden="true">＋</span> New chat</button>
+<a class="simulation-link" href="/simulation">Simulation ↗</a>
+<div class="history-label">Recent chats</div><nav id="chat-list" aria-label="Chat history"></nav>
+<div class="sidebar-footer">SearchHacks · Search testbed</div>
+</aside>
+<section class="chat-panel" aria-label="Search conversation">
+<header><div class="controls"><button id="toggle-sidebar" class="icon" aria-label="Toggle chats" aria-expanded="false">☰</button><h1>SearchHacks <span>/ chat</span></h1></div><span id="status" role="status">Connecting…</span></header>
+<div id="feed" aria-live="polite"><article class="welcome"><h2>What would you like to find?</h2><p>Ask a question and explore the sources.</p></article></div>
+<div class="composer-wrap"><form id="form"><input id="q" aria-label="Search query" placeholder="Ask anything…" maxlength="4000" autocomplete="off" required><button id="send" class="primary" aria-label="Send message">↑</button></form><p class="composer-note">Search providers selected by the optimizer · Powered by Telem</p></div>
+</section></main><script>let sessionId=null,busy=false;
+const welcome=document.querySelector('#feed').innerHTML;
+const feed=document.querySelector('#feed'),q=document.querySelector('#q'),send=document.querySelector('#send');
+fetch('/api/health').then(r=>document.querySelector('#status').textContent=r.ok?'Driver online':'Offline');
+function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function sources(s){return '<details class="search-details" style="margin:12px 0"><summary><span class="pill">'+esc(s.provider)+'</span> · '+esc(s.query||'Search')+' · '+s.results.length+' sources · <span data-feedback-token="'+esc(s.feedback_token)+'">Awaiting your response</span></summary>'+s.results.map(x=>'<article><a target="_blank" rel="noopener" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'">'+esc(x.title)+'</a><p>'+esc(x.snippet)+'</p></article>').join('')+'</details>'}
+function feedbackBadge(f){for(const badge of feed.querySelectorAll('[data-feedback-token]'))if(badge.dataset.feedbackToken===f.feedback_token){badge.textContent=Object.entries(f.feedback||{}).map(([k,v])=>k.replaceAll('_',' ')+': '+(v?'yes':'no')).join(' · ');badge.title=f.evidence}}
+document.querySelector('#form').onsubmit=async e=>{
+ e.preventDefault();if(busy||!q.value.trim())return;
+ busy=true;send.disabled=true;document.querySelector('#new-chat').disabled=true;const query=q.value.trim();q.value='';
+ const user=document.createElement('article');user.className='user-message';user.innerHTML='<b>You</b><p>'+esc(query)+'</p>';feed.append(user);
+ const box=document.createElement('article');box.className='assistant-message';box.innerHTML='<details class="tool-activity"><summary>Working…</summary><div class="activity" role="log"></div></details><div class="answer" style="white-space:pre-wrap;margin-top:12px"></div>';feed.append(box);
+ const activity=box.querySelector('.activity'),answer=box.querySelector('.answer');
+ let finished=false,lastModel=null;const startedAt=Date.now(),toolDetails=box.querySelector('.tool-activity'),toolSummary=toolDetails.querySelector('summary');
+ function log(text){const line=document.createElement('div');line.className='help';line.style.margin='8px 0';line.textContent=text;activity.append(line);toolSummary.textContent=text}
+ function event(d){
+  if(d.event==='started')log('Connected');
+  if(d.event==='model'){if(d.message!==lastModel)log(d.message+'…');lastModel=d.message}
+  if(d.event==='routing')log('search: “'+d.query+'” · asking optimizer for a provider…');
+  if(d.event==='searching')log('Optimizer selected '+d.provider+' · searching through Telem…');
+  if(d.event==='results'){log('Search complete · '+d.results.length+' sources');activity.insertAdjacentHTML('beforeend',sources(d))}
+  if(d.event==='feedback_submitting')log('search_feedback · submitting '+JSON.stringify(d.feedback)+' outcome…');
+  if(d.event==='feedback_submitted'){log('search_feedback accepted by optimizer · '+d.evidence);feedbackBadge(d)}
+  if(d.event==='tool_error')log(d.tool+' failed: '+d.message);
+  if(d.event==='error')throw Error(d.error||'Request failed');
+  if(d.event==='done'){sessionId=d.session_id;history.replaceState(null,'','/chat?chat='+encodeURIComponent(sessionId));answer.textContent=d.answer;finished=true;toolSummary.textContent='Activity · '+Math.max(1,Math.round((Date.now()-startedAt)/1000))+'s';refreshHistory()}
+  if(feed.scrollHeight-feed.scrollTop-feed.clientHeight<240)feed.scrollTop=feed.scrollHeight;
+ }
+ try{
+  const r=await fetch('/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,session_id:sessionId})});
+  if(!r.ok)throw Error('Request failed ('+r.status+')');
+  const reader=r.body.getReader(),decoder=new TextDecoder();let buffer='';
+  while(true){const {value,done}=await reader.read();buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});let index;while((index=buffer.indexOf('\n'))!==-1){const line=buffer.slice(0,index);buffer=buffer.slice(index+1);if(line.trim())event(JSON.parse(line))}if(done)break}
+  if(buffer.trim())event(JSON.parse(buffer));if(!finished)throw Error('Connection ended before the answer was ready.');
+ }catch(e){log('Error: '+e.message)}finally{busy=false;send.disabled=false;document.querySelector('#new-chat').disabled=false;q.focus()}
+};
+async function refreshHistory(){
+ try{
+ const r=await fetch('/api/chat/conversations');if(!r.ok)throw Error('Could not load chats');
+ const chats=await r.json(),list=document.querySelector('#chat-list');list.replaceChildren();
+ if(!chats.length){list.textContent='No chats yet';return}
+ for(const chat of chats){
+  const button=document.createElement('button');button.className='chat-item'+(chat.id===sessionId?' selected':'');
+  button.setAttribute('aria-current',chat.id===sessionId?'page':'false');
+  const title=document.createElement('span');title.textContent=chat.title;button.append(title);
+  const meta=document.createElement('small');meta.textContent=chat.message_count+' messages'+(chat.updated_at?' · '+new Date(chat.updated_at).toLocaleDateString(): '');button.append(meta);
+  button.onclick=()=>{if(!busy)openChat(chat.id)};list.append(button);
+ }
+ }catch(e){document.querySelector('#chat-list').textContent=e.message}
+}
+function historyMessage(role,content){
+ const article=document.createElement('article');article.className=role==='user'?'user-message':'assistant-message';const label=document.createElement('b');label.textContent=role==='user'?'You':'Assistant';article.append(label);
+ const body=document.createElement('div');body.style.cssText='white-space:pre-wrap;margin-top:8px';body.textContent=content||'';article.append(body);feed.append(article);return article;
+}
+async function openChat(id){
+ if(busy)return;
+ try{
+ const r=await fetch('/api/chat/conversations/'+encodeURIComponent(id));if(!r.ok)throw Error('Could not open chat');
+ const d=await r.json();sessionId=d.session_id;feed.replaceChildren();let box=null;const calls=new Map(),feedback=[];
+ for(const m of d.messages){
+  if(m.role==='user'){historyMessage('user',m.content);box=null}
+  if(m.role==='assistant'){
+   if(m.content){
+    if(!box)box=historyMessage('assistant',m.content);
+    else {const body=document.createElement('div');body.className='answer';body.style.whiteSpace='pre-wrap';body.textContent=m.content;box.append(body)}
+   }
+   for(const c of m.tool_calls||[])calls.set(c.id,c);
+  }
+  if(m.role==='tool'){
+   const call=calls.get(m.tool_call_id);let result,args;try{result=JSON.parse(m.content);args=JSON.parse(call?.function.arguments||'{}')}catch{continue}
+   if(!box)box=historyMessage('assistant','');
+   let tools=box.querySelector('.tool-activity');
+   if(!tools){tools=document.createElement('details');tools.className='tool-activity';tools.innerHTML='<summary>Tool activity</summary><div class="activity"></div>';box.prepend(tools)}
+   const activity=tools.querySelector('.activity');
+   if(result.results)activity.insertAdjacentHTML('beforeend',sources({...result,query:args.query}));
+   if(result.ok&&['search_feedback','web_search_feedback'].includes(call?.function.name)){
+    const evidence=document.createElement('p');evidence.className='help';evidence.textContent='search_feedback accepted by optimizer · '+(args.evidence||'');activity.append(evidence);feedback.push(args);
+   }
+   if(result.error){const error=document.createElement('p');error.textContent='Tool error: '+result.error;activity.append(error)}
+  }
+ }
+ feedback.forEach(feedbackBadge);
+ history.replaceState(null,'','/chat?chat='+encodeURIComponent(sessionId));document.body.classList.remove('sidebar-open');await refreshHistory();feed.scrollTop=feed.scrollHeight;q.focus();
+ }catch(e){document.querySelector('#status').textContent=e.message}
+}
+document.querySelector('#new-chat').onclick=()=>{
+ if(busy)return;sessionId=null;feed.innerHTML=welcome;q.value='';history.replaceState(null,'','/chat');refreshHistory();q.focus();
+};
+const initialChat=new URLSearchParams(location.search).get('chat');
+if(initialChat)openChat(initialChat);else refreshHistory();
+
+document.querySelector('#toggle-sidebar').onclick=()=>{const open=document.body.classList.toggle('sidebar-open');document.querySelector('#toggle-sidebar').setAttribute('aria-expanded',String(open))};
+</script></body></html>

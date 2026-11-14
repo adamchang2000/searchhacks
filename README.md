@@ -219,3 +219,19 @@ provider success rates. Edit values in the UI, save, then start/pause/resume/sto
 The worker calls only the optimizer's which_search and submit_feedback endpoints.
 The simulator's category is recorded with each event; the optimizer's current routing
 policy still aggregates feedback across categories.
+
+### Feedback outcomes
+
+The existing /api/submit_feedback endpoint now accepts a feedback_token and a feedback
+record with observed booleans: purchase_conversion, user_confirmed_outcome, and
+user_stopped_following_up (after more than one query). Omit unknown fields. Partial
+submissions merge observations; missing fields are not false. For routing, any observed
+true currently counts as success; an observed record containing only false values counts
+as failure. Historical binary feedback stays stored separately without invented labels.
+
+The simulator has provider/category dropdowns and one probability slider per outcome.
+Each query samples a uniform latent goodness: outcome probability p is met when
+goodness >= 1-p. This correlates outcomes while preserving their marginal probabilities.
+Cessation is sampled at the end of each synthetic three-query session. The chart plots
+successful feedback submissions by time and latent goodness, with outcome fields on hover.
+Latent goodness is simulator diagnostic data; it is not sent as optimizer feedback.

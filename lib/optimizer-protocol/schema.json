@@ -353,6 +353,46 @@
         "title": "SubmitFeedbackResponse",
         "type": "object"
       },
+      "FeedbackRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "purchase_conversion": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Conversion"
+          },
+          "user_confirmed_outcome": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Confirmed Outcome"
+          },
+          "user_stopped_following_up": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Stopped Following Up"
+          }
+        },
+        "title": "FeedbackRecord",
+        "type": "object"
+      },
       "SubmitFeedbackRequest": {
         "properties": {
           "feedback_token": {
@@ -360,14 +400,13 @@
             "title": "Feedback Token",
             "type": "string"
           },
-          "is_good": {
-            "title": "Is Good",
-            "type": "boolean"
+          "feedback": {
+            "$ref": "#/components/schemas/FeedbackRecord"
           }
         },
         "required": [
           "feedback_token",
-          "is_good"
+          "feedback"
         ],
         "title": "SubmitFeedbackRequest",
         "type": "object"
@@ -425,16 +464,15 @@
             "title": "Category Source",
             "type": "string"
           },
-          "is_good": {
+          "feedback": {
             "anyOf": [
               {
-                "type": "boolean"
+                "$ref": "#/components/schemas/FeedbackRecord"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Is Good"
+            ]
           },
           "feedback_at": {
             "anyOf": [
@@ -458,7 +496,7 @@
           "category_l1",
           "category_l2",
           "category_source",
-          "is_good",
+          "feedback",
           "feedback_at"
         ],
         "title": "SearchOut",

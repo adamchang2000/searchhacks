@@ -1,3 +1,9 @@
+export interface FeedbackRecord {
+  purchase_conversion?: boolean;
+  user_confirmed_outcome?: boolean;
+  user_stopped_following_up?: boolean;
+}
+
 import {
   createOptimizerClient,
   type OptimizerClient,
@@ -66,9 +72,9 @@ export class SearchHacksClient {
   }
 
   /** Report whether a previous search's results were good. */
-  async submitFeedback(feedbackToken: string, isGood: boolean): Promise<void> {
+  async submitFeedback(feedbackToken: string, feedback: FeedbackRecord): Promise<void> {
     const { error } = await this.api.POST("/api/submit_feedback", {
-      body: { feedback_token: feedbackToken, is_good: isGood },
+      body: { feedback_token: feedbackToken, feedback },
     });
     if (error) {
       throw new Error(`submit_feedback failed: ${JSON.stringify(error)}`);

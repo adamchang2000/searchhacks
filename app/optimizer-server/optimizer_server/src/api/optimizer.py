@@ -1,7 +1,7 @@
 """The optimizer protocol proper: what the SDK / drivers call.
 
     which_search     query -> provider to use + feedback_token
-    submit_feedback  feedback_token + is_good
+    submit_feedback  feedback_token + optional outcome record
 """
 
 from typing import List, Optional
@@ -10,6 +10,7 @@ from uuid import UUID
 from django.shortcuts import get_object_or_404
 from ninja import Field, Router, Schema
 from ninja.errors import HttpError
+from pydantic import ConfigDict, StrictBool
 
 from optimizer_server.src.apps.searches.models import Feedback, Search
 from optimizer_server.src.lib.classifier import classify
@@ -35,9 +36,16 @@ class WhichSearchResponse(Schema):
     feedback_token: UUID
 
 
+class FeedbackRecord(Schema):
+    model_config = ConfigDict(extra="forbid")
+    purchase_conversion: Optional[StrictBool] = None
+    user_confirmed_outcome: Optional[StrictBool] = None
+    user_stopped_following_up: Optional[StrictBool] = None
+
+
 class SubmitFeedbackRequest(Schema):
     feedback_token: UUID
-    is_good: bool
+    feedback: FeedbackRecord
 
 
 class SubmitFeedbackResponse(Schema):
@@ -75,5 +83,8 @@ def which_search(request, body: WhichSearchRequest):
 @router.post("/submit_feedback", response=SubmitFeedbackResponse)
 def submit_feedback(request, body: SubmitFeedbackRequest):
     search = get_object_or_404(Search, id=body.feedback_token)
-    Feedback.objects.update_or_create(search=search, defaults={"is_good": body.is_good})
+    updates = body.feedback.model_dump(exclude_unset=True)
+    if not updates or any(value is None for value in updates.values()):
+        raise HttpError(422, "Supply at least one observed boolean outcome; omit unknown fields")
+    Feedback.objects.update_or_create(search=search, defaults=updates)
     return {"ok": True}

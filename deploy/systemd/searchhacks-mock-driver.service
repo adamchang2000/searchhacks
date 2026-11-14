@@ -3,6 +3,9 @@
 Description=SearchHacks mock driver backend
 After=network.target
 [Service]
+EnvironmentFile=-/home/exedev/.config/searchhacks/telem.env
+Environment=OPTIMIZER_URL=https://optimizer.int.exe.xyz
+Environment=TELEM_BASE_URL=https://hack.telem.ai/api
 User=exedev
 WorkingDirectory=/home/exedev/searchhacks/app/mock-driver-server
 ExecStart=/usr/local/bin/uv run mock-driver-server --config config/dev.json --host 0.0.0.0 --port 8000

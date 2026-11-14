@@ -76,7 +76,7 @@ async function worker() {
       const provider = res.provider as SearchProvider;
       const isGood = Math.random() < truth.probGood(cell, provider);
       good += Number(isGood);
-      await client.submitFeedback(res.feedbackToken, isGood);
+      await client.submitFeedback(res.feedbackToken, { user_confirmed_outcome: isGood });
       if (i >= total / 2) {
         const k = `${cell.top}/${cell.sub ?? ""}`;
         const m = routed.get(k) ?? new Map();

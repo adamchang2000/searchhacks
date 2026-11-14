@@ -35,4 +35,7 @@ class Feedback(models.Model):
     created_at = models.DateTimeField(auto_now=True)
 
     # Placeholder signal until we decide what feedback really is.
-    is_good = models.BooleanField()
+    legacy_is_good = models.BooleanField(null=True, blank=True)
+    purchase_conversion = models.BooleanField(null=True, blank=True)
+    user_confirmed_outcome = models.BooleanField(null=True, blank=True)
+    user_stopped_following_up = models.BooleanField(null=True, blank=True)

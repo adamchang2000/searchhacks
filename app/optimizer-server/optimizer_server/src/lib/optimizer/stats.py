@@ -12,9 +12,11 @@ CellKey = Tuple[Optional[int], Optional[int], str]  # (category_l1, category_l2,
 
 def feedback_counts() -> Dict[CellKey, Counts]:
     """good/bad counts per (category_l1, category_l2, provider), the finest level we route on."""
-    rows = Feedback.objects.values(
+    observed = Q(purchase_conversion__isnull=False) | Q(user_confirmed_outcome__isnull=False) | Q(user_stopped_following_up__isnull=False)
+    positive = Q(purchase_conversion=True) | Q(user_confirmed_outcome=True) | Q(user_stopped_following_up=True)
+    rows = Feedback.objects.filter(observed).values(
         "search__category_l1", "search__category_l2", "search__provider"
-    ).annotate(n=Count("id"), good=Count("id", filter=Q(is_good=True)))
+    ).annotate(n=Count("id"), good=Count("id", filter=positive))
     return {
         (r["search__category_l1"], r["search__category_l2"], r["search__provider"]): Counts(
             good=r["good"], bad=r["n"] - r["good"]
