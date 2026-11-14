@@ -52,7 +52,12 @@ function App() {
               Optimizer
             </NavLink>
           </nav>
-          <span className="ml-auto">
+          <nav aria-label="Project navigation" className="ml-auto flex flex-wrap items-center gap-3 text-xs">
+            <a href="https://searchhacks-optimizer.exe.xyz/optimizer" aria-current="page" className="font-semibold">Optimizer</a>
+            <a href="https://searchhacks-driver.exe.xyz/simulation" className="text-secondary hover:underline">Simbed</a>
+            <a href="https://searchhacks-driver.exe.xyz/chat" className="text-secondary hover:underline">Live queries</a>
+          </nav>
+          <span>
             <ServerStatus />
           </span>
         </div>

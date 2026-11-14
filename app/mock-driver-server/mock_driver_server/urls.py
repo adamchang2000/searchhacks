@@ -1,4 +1,5 @@
 from pathlib import Path
+from mock_driver_server.navigation import render_driver_page
 from django.conf import settings
 from django.http import FileResponse, HttpResponseRedirect
 from django.urls import path
@@ -13,7 +14,7 @@ api.add_router("/sim", sim_router)
 api.add_router("/chat", chat_router)
 
 def simulation(request):
-    return FileResponse(open(Path(__file__).with_name("simulation.html"), "rb"), content_type="text/html")
+    return render_driver_page("simulation.html", "simulation")
 
 def shared_styles(request):
     response = FileResponse(open(Path(__file__).with_name("shared.css"), "rb"), content_type="text/css")
@@ -21,7 +22,7 @@ def shared_styles(request):
     return response
 
 def chatbot(request):
-    return FileResponse(open(Path(__file__).with_name("chatbot.html"), "rb"), content_type="text/html")
+    return render_driver_page("chatbot.html", "chat")
 
 urlpatterns = [
     path("", lambda request: HttpResponseRedirect("/simulation")),
