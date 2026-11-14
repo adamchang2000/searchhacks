@@ -165,7 +165,7 @@ Check from the driver VM:
 ssh searchhacks-driver.exe.xyz curl -s https://optimizer.int.exe.xyz/api/health
 ```
 
-To browse the API docs yourself (exe.dev login required), point the public proxy at port 8000:
+To browse the dashboard and API docs yourself (exe.dev login required), point the public proxy at port 8000:
 `ssh exe.dev share port searchhacks-optimizer 8000`, then open https://searchhacks-optimizer.exe.xyz/api/docs.
 
 ### Shipping changes
@@ -199,8 +199,10 @@ npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz 
   If it goes private again, each VM needs a read-only deploy key or `gh auth login`.
 - SQLite lives at `app/optimizer-server/db.sqlite3` on the optimizer VM. Back it up before
   doing anything destructive.
-- The dashboard (`app/optimizer-ui`) isn't deployed yet. Run it locally, or build it and serve
-  the static files from the optimizer VM.
+- The optimizer server also serves the dashboard: `update.sh` builds `app/optimizer-ui/dist`, and
+  every non-`/api` path returns it (SPA fallback to `index.html`). With the public proxy on port
+  8000 (see above) it's at https://searchhacks-optimizer.exe.xyz/. Locally, `make ui` still runs
+  the Vite dev server against `localhost:8000`.
 
 ### Mock-driver backend
 

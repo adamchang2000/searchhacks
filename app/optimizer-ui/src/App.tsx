@@ -18,7 +18,7 @@ function ServerStatus() {
   const fetching = useIsFetching() > 0;
   const ok = health.isSuccess && !health.isError;
   return (
-    <span className="text-secondary flex items-center gap-2 text-xs" title={API_BASE_URL}>
+    <span className="text-secondary flex items-center gap-2 text-xs" title={API_BASE_URL || window.location.origin}>
       <span
         className="inline-block h-2 w-2 rounded-full"
         style={{
@@ -26,7 +26,7 @@ function ServerStatus() {
           opacity: fetching ? 0.5 : 1,
         }}
       />
-      {ok ? "live" : "server unreachable"} · {API_BASE_URL.replace(/^https?:\/\//, "")}
+      {ok ? "live" : "server unreachable"} · {(API_BASE_URL || window.location.origin).replace(/^https?:\/\//, "")}
     </span>
   );
 }

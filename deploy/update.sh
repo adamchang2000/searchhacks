@@ -16,6 +16,9 @@ main() {
   # All JS workspaces.
   npm ci
 
+  # Dashboard static build; the optimizer server serves app/optimizer-ui/dist at /.
+  npm run build -w @searchhacks/optimizer-ui
+
   # Install/refresh unit files, then restart whichever ones this VM has enabled.
   sudo cp deploy/systemd/searchhacks-*.service /etc/systemd/system/
   sudo systemctl daemon-reload
