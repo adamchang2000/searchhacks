@@ -10,13 +10,13 @@ function fmt(n: number | null | undefined, digits = 2) {
 export function Home() {
   const stats = useQuery({
     queryKey: ["stats", "providers"],
-    queryFn: async () => (await api.GET("/api/stats/providers")).data ?? [],
+    queryFn: async () => (await api.GET("/api/ui/stats/providers")).data ?? [],
     refetchInterval: REFRESH_MS,
   });
   const searches = useQuery({
     queryKey: ["searches"],
     queryFn: async () =>
-      (await api.GET("/api/searches", { params: { query: { limit: 50 } } })).data ?? [],
+      (await api.GET("/api/ui/searches", { params: { query: { limit: 50 } } })).data ?? [],
     refetchInterval: REFRESH_MS,
   });
 

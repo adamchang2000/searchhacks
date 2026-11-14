@@ -1,4 +1,4 @@
-"""Read-only view of historical searches, for the dashboard."""
+"""Read-only view of historical searches."""
 
 from datetime import datetime
 from typing import List, Optional
@@ -8,7 +8,7 @@ from ninja import Router, Schema
 
 from optimizer_server.src.apps.searches.models import Search
 
-router = Router(tags=["dashboard"])
+router = Router()
 
 
 class SearchOut(Schema):

@@ -64,7 +64,8 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
 
 `is_good` is a placeholder until we decide what feedback really is.
 
-Dashboard (read-only): `GET /api/searches`, `GET /api/stats/providers`.
+Dashboard endpoints live under `/api/ui/` (`GET /api/ui/searches`, `GET /api/ui/stats/providers`).
+They back `app/optimizer-ui` only, aren't part of the core protocol, and are free to change with the UI.
 
 ## Development
 

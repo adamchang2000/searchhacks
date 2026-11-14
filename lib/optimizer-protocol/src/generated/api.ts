@@ -55,7 +55,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/searches": {
+    "/api/ui/searches": {
         parameters: {
             query?: never;
             header?: never;
@@ -63,7 +63,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Searches */
-        get: operations["optimizer_server_src_api_searches_list_searches"];
+        get: operations["optimizer_server_src_api_ui_searches_list_searches"];
         put?: never;
         post?: never;
         delete?: never;
@@ -72,7 +72,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/stats/providers": {
+    "/api/ui/stats/providers": {
         parameters: {
             query?: never;
             header?: never;
@@ -80,7 +80,7 @@ export interface paths {
             cookie?: never;
         };
         /** Provider Stats */
-        get: operations["optimizer_server_src_api_stats_provider_stats"];
+        get: operations["optimizer_server_src_api_ui_stats_provider_stats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -241,7 +241,7 @@ export interface operations {
             };
         };
     };
-    optimizer_server_src_api_searches_list_searches: {
+    optimizer_server_src_api_ui_searches_list_searches: {
         parameters: {
             query?: {
                 limit?: number;
@@ -263,7 +263,7 @@ export interface operations {
             };
         };
     };
-    optimizer_server_src_api_stats_provider_stats: {
+    optimizer_server_src_api_ui_stats_provider_stats: {
         parameters: {
             query?: never;
             header?: never;

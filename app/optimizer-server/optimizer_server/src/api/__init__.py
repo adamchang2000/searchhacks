@@ -1,7 +1,6 @@
 from optimizer_server.src.api.health import router as health_router
 from optimizer_server.src.api.optimizer import router as optimizer_router
-from optimizer_server.src.api.searches import router as searches_router
-from optimizer_server.src.api.stats import router as stats_router
+from optimizer_server.src.api.ui import router as ui_router
 
 from django.conf import settings
 from ninja import NinjaAPI
@@ -13,8 +12,7 @@ api = NinjaAPI(
 )
 
 api.add_router("/health", health_router)
-# Protocol: /api/which_search, /api/submit_feedback
+# Core protocol (the hot loop): /api/which_search, /api/submit_feedback
 api.add_router("", optimizer_router)
-# Dashboard: /api/searches, /api/stats/providers
-api.add_router("/searches", searches_router)
-api.add_router("/stats", stats_router)
+# Dashboard: /api/ui/*
+api.add_router("/ui", ui_router)

@@ -1,22 +1,11 @@
-"""Aggregate views over historical searches, for the optimizer and the dashboard."""
+"""Per-provider aggregates over historical searches + feedback."""
 
-from typing import List, Optional
+from typing import List
 
 from django.db.models import Count, Q
-from ninja import Router, Schema
 
 from optimizer_server.src.apps.searches.models import Feedback, Search
-from optimizer_server.src.lib.optimizer import ProviderStats
-
-router = Router(tags=["dashboard"])
-
-
-class ProviderStatsOut(Schema):
-    provider: str
-    num_searches: int
-    num_feedback: int
-    num_good: int
-    good_rate: Optional[float]
+from optimizer_server.src.lib.optimizer.policy import ProviderStats
 
 
 def compute_provider_stats() -> List[ProviderStats]:
@@ -39,8 +28,3 @@ def compute_provider_stats() -> List[ProviderStats]:
         )
         for provider, n in searches.items()
     ]
-
-
-@router.get("/providers", response=List[ProviderStatsOut])
-def provider_stats(request):
-    return compute_provider_stats()

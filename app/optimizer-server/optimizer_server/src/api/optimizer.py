@@ -10,7 +10,7 @@ from uuid import UUID
 from django.shortcuts import get_object_or_404
 from ninja import Field, Router, Schema
 
-from optimizer_server.src.api.stats import compute_provider_stats
+from optimizer_server.src.lib.optimizer.stats import compute_provider_stats
 from optimizer_server.src.apps.searches.models import Feedback, Search
 from optimizer_server.src.lib.optimizer import choose_provider
 

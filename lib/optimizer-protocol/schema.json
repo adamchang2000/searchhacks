@@ -89,9 +89,9 @@
         }
       }
     },
-    "/api/searches": {
+    "/api/ui/searches": {
       "get": {
-        "operationId": "optimizer_server_src_api_searches_list_searches",
+        "operationId": "optimizer_server_src_api_ui_searches_list_searches",
         "summary": "List Searches",
         "parameters": [
           {
@@ -122,13 +122,13 @@
           }
         },
         "tags": [
-          "dashboard"
+          "ui"
         ]
       }
     },
-    "/api/stats/providers": {
+    "/api/ui/stats/providers": {
       "get": {
-        "operationId": "optimizer_server_src_api_stats_provider_stats",
+        "operationId": "optimizer_server_src_api_ui_stats_provider_stats",
         "summary": "Provider Stats",
         "parameters": [],
         "responses": {
@@ -148,7 +148,7 @@
           }
         },
         "tags": [
-          "dashboard"
+          "ui"
         ]
       }
     }
