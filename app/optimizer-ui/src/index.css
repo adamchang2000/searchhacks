@@ -25,6 +25,9 @@
   --status-good: #0b7a3e;
   --status-bad: #c62f2f;
   --status-pending: #7c7b76;
+
+  /* Distribution-reset marker on the Optimizer tab. */
+  --reset-marker: #d42c2c;
 }
 
 body {
