@@ -46,8 +46,26 @@ model version, or `unclassified`), so stats can be recomputed if the classifier 
 - Route by drawing one sample per available provider and taking the max. With probability
   `EXPLORE_FLOOR` (5%), pick uniformly instead, so every provider keeps getting some traffic.
 
+**Precomputed snapshot** (`src/lib/optimizer/distribution.py`): `which_search` does no feedback
+aggregation. It looks up the precomputed Betas for its cell in memory and samples from them.
+- `optimizer-recompute` (a separate process) aggregates all feedback once, computes every cell's
+  posterior (global, each L1, each (L1, L2), times each provider with feedback), and writes a
+  `SearchDistribution` snapshot with its `SearchDistributionCell` rows. It skips the write when
+  no feedback changed and keeps the last 20 snapshots. Then it POSTs
+  `/api/admin/reload-search-distribution`, and the server swaps the new snapshot in.
+- `GET /api/admin/search-distribution` shows the snapshot being routed with. A fresh server
+  loads the latest snapshot on its first request. With no snapshot, routing is uniform.
+- Routing therefore lags feedback by up to one interval (10s on the VM). Thompson sampling keeps
+  drawing per request, so this costs almost nothing. The sample is still drawn per request; only
+  the Betas are cached.
+- In-memory state is per process. The server runs as one uvicorn process, so one reload call is
+  enough; with more workers, each would need to poll for the latest snapshot id.
+
+```bash
+uv run optimizer-recompute --config config/dev.json                         # once
+uv run optimizer-recompute --config config/dev.json --loop --interval 10    # what the VM runs
+```
+
 **Known limits**
-- `which_search` re-aggregates all feedback per request. Fine at hackathon scale; cache the
-  counts in memory if it gets slow.
 - SQLite runs in WAL mode with immediate transactions so concurrent drivers don't hit
   "database is locked"; writes are still serialized.

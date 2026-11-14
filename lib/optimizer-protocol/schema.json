@@ -271,6 +271,52 @@
           "ui"
         ]
       }
+    },
+    "/api/admin/reload-search-distribution": {
+      "post": {
+        "operationId": "optimizer_server_src_api_admin_reload_search_distribution",
+        "summary": "Reload Search Distribution",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchDistributionStatus"
+                }
+              }
+            }
+          }
+        },
+        "description": "Load the latest SearchDistribution snapshot into memory. Called by optimizer-recompute.",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/search-distribution": {
+      "get": {
+        "operationId": "optimizer_server_src_api_admin_search_distribution",
+        "summary": "Search Distribution",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchDistributionStatus"
+                }
+              }
+            }
+          }
+        },
+        "description": "The snapshot the server is currently routing with.",
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "components": {
@@ -631,6 +677,49 @@
           "buckets"
         ],
         "title": "TrafficOut",
+        "type": "object"
+      },
+      "SearchDistributionStatus": {
+        "properties": {
+          "distribution_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distribution Id"
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "num_feedback": {
+            "title": "Num Feedback",
+            "type": "integer"
+          },
+          "num_cells": {
+            "title": "Num Cells",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "distribution_id",
+          "computed_at",
+          "num_feedback",
+          "num_cells"
+        ],
+        "title": "SearchDistributionStatus",
         "type": "object"
       }
     }

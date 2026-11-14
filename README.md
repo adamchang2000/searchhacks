@@ -60,6 +60,8 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
    query into a Google Trends category (via jev), picks a provider for that category, and returns
    an opaque `feedback_token` linking later feedback to this call. Callers that already know the
    category (the mock driver) pass `override_query_category` to skip classification.
+   `available_providers` must be Telem slugs from `lib/types` `SearchProvider`; any other name
+   returns 422.
 2. The caller dispatches the query to `provider` itself.
 3. The caller reports `is_good` with that token. One feedback per token; resubmitting overwrites.
    An unknown token returns 404.
@@ -125,7 +127,7 @@ Two exe.dev VMs, set up **identically** (Ubuntu 24.04, user `exedev`, repo at `~
 
 | VM | Role | Reachable from the other VM at |
 |---|---|---|
-| `searchhacks-optimizer.exe.xyz` | long-lived optimizer server (`searchhacks-optimizer`, port 8000) | `https://optimizer.int.exe.xyz/` |
+| `searchhacks-optimizer.exe.xyz` | long-lived optimizer server (`searchhacks-optimizer`, port 8000) + routing recompute loop (`searchhacks-optimizer-recompute`) | `https://optimizer.int.exe.xyz/` |
 | `searchhacks-driver.exe.xyz` | drivers: mock driver now, chatbot / driver server later | `https://driver.int.exe.xyz/` |
 
 **Cross-VM traffic:** exe.dev VMs share no private network. Each direction uses an exe.dev
@@ -142,7 +144,8 @@ deploy/
 ├── update.sh                 # git pull, uv sync every app/*/pyproject.toml, npm ci,
 │                             #   install unit files, restart this VM's enabled searchhacks-* units
 └── systemd/
-    └── searchhacks-optimizer.service   # runs migrations (ExecStartPre), then the server on :8000
+    ├── searchhacks-optimizer.service             # runs migrations (ExecStartPre), then the server on :8000
+    └── searchhacks-optimizer-recompute.service   # recomputes the routing snapshot every 10s, tells the server to reload
 ```
 
 There is no prod config: the VMs run everything with the same committed `config/dev.json`
@@ -157,6 +160,7 @@ From your laptop, after the repo is pushed to `main`:
 make bootstrap HOST=optimizer
 make bootstrap HOST=driver
 make enable HOST=optimizer UNIT=searchhacks-optimizer
+make enable HOST=optimizer UNIT=searchhacks-optimizer-recompute
 ```
 
 Check from the driver VM:

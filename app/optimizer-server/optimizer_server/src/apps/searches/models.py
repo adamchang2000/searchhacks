@@ -39,3 +39,39 @@ class Feedback(models.Model):
     purchase_conversion = models.BooleanField(null=True, blank=True)
     user_confirmed_outcome = models.BooleanField(null=True, blank=True)
     user_stopped_following_up = models.BooleanField(null=True, blank=True)
+
+
+class SearchDistribution(models.Model):
+    """One snapshot of the routing posteriors, written by `optimizer-recompute`.
+
+    The server routes from the latest snapshot held in memory (lib/optimizer/distribution.py),
+    so `which_search` never aggregates feedback itself. Snapshots are immutable; a recompute
+    writes a new one and old ones are pruned.
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # What the snapshot was computed from: total feedback rows and the newest feedback write.
+    # Recompute skips writing a snapshot when both are unchanged.
+    num_feedback = models.IntegerField()
+    feedback_through = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-id"]
+
+
+class SearchDistributionCell(models.Model):
+    """Posterior Beta(alpha, beta) of `provider` being good in one routing cell.
+
+    Cells: global (l1 and l2 null), each level-1 category (l2 null), each (l1, l2) pair.
+    The hierarchy prior is already folded in. Providers with no feedback anywhere have no rows;
+    their posterior is Beta(1, 1) everywhere.
+    """
+
+    distribution = models.ForeignKey(
+        SearchDistribution, on_delete=models.CASCADE, related_name="cells"
+    )
+    category_l1 = models.IntegerField(null=True, blank=True)
+    category_l2 = models.IntegerField(null=True, blank=True)
+    provider = models.CharField(max_length=64)
+    alpha = models.FloatField()
+    beta = models.FloatField()

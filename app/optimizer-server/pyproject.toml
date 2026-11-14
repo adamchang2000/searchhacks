@@ -21,6 +21,7 @@ searchhacks-types = { path = "../../lib/types", editable = true }
 [project.scripts]
 optimizer-manage = "optimizer_server.bin.manage:main"
 optimizer-server = "optimizer_server.bin.server:main"
+optimizer-recompute = "optimizer_server.bin.recompute:main"
 
 [build-system]
 requires = ["hatchling"]

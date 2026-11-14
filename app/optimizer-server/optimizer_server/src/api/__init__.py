@@ -1,3 +1,4 @@
+from optimizer_server.src.api.admin import router as admin_router
 from optimizer_server.src.api.health import router as health_router
 from optimizer_server.src.api.optimizer import router as optimizer_router
 from optimizer_server.src.api.ui import router as ui_router
@@ -16,3 +17,5 @@ api.add_router("/health", health_router)
 api.add_router("", optimizer_router)
 # Dashboard: /api/ui/*
 api.add_router("/ui", ui_router)
+# Operational: /api/admin/* (e.g. reload the routing snapshot)
+api.add_router("/admin", admin_router)

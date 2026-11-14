@@ -1,0 +1,16 @@
+# Recomputes the optimizer's routing snapshot every 10s and tells the optimizer server (same VM)
+# to reload it. Enable on the optimizer VM:
+#   make enable HOST=optimizer UNIT=searchhacks-optimizer-recompute
+[Unit]
+Description=SearchHacks optimizer routing recompute
+After=network.target searchhacks-optimizer.service
+
+[Service]
+User=exedev
+WorkingDirectory=/home/exedev/searchhacks/app/optimizer-server
+ExecStart=/usr/local/bin/uv run optimizer-recompute --config config/dev.json --loop --interval 10
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

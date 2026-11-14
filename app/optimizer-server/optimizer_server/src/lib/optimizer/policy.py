@@ -13,11 +13,16 @@ accumulates. No hand-tuned pruning or significance thresholds.
 To route: draw one sample from each available provider's Beta and pick the max. With
 probability EXPLORE_FLOOR, pick uniformly instead, so every provider keeps getting some
 traffic (catches providers that change over time).
+
+Posteriors are not computed per request. `optimizer-recompute` builds every cell's posterior
+(see distribution.py) into a SearchDistribution snapshot; the server holds the latest one in
+memory and `choose_provider` only looks up Betas and draws from them. The draw must stay per
+request: caching one choice per cell between refreshes would turn this into greedy routing.
 """
 
 import random
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import List, Mapping, Optional, Tuple
 
 PRIOR_STRENGTH = 20.0
 EXPLORE_FLOOR = 0.05
@@ -89,34 +94,38 @@ def posterior(
             if l2 is not None and c2 == l2:
                 l2_c += c
 
+    return chain(global_c, l1_c if l1 is not None else None, l2_c if l2 is not None else None)
+
+
+def chain(global_c: Counts, l1_c: Optional[Counts], l2_c: Optional[Counts]) -> Beta:
+    """Posterior down the hierarchy: global, then the level-1 cell, then the level-2 cell.
+    Pass None for a level the cell does not go down to."""
     post = UNIFORM.update(global_c)
-    if l1 is not None:
+    if l1_c is not None:
         post = post.shrink().update(l1_c)
-        if l2 is not None:
+        if l2_c is not None:
             post = post.shrink().update(l2_c)
     return post
 
 
+# Precomputed posteriors for one routing cell: provider -> Beta. A provider missing from it has
+# no feedback anywhere, so its posterior is UNIFORM.
+CellPosteriors = Mapping[str, Beta]
+
+
 def choose_provider(
     available_providers: List[str],
-    counts: CellCounts,
-    l1: Optional[int],
-    l2: Optional[int],
+    cell: CellPosteriors,
     rng: random.Random = random._inst,
 ) -> str:
+    """Thompson-sample one provider using precomputed posteriors. No counting happens here."""
     if not available_providers:
         raise ValueError("available_providers must be non-empty")
     if rng.random() < EXPLORE_FLOOR:
         return rng.choice(available_providers)
 
     def draw(provider: str) -> float:
-        b = posterior(counts, provider, l1, l2)
+        b = cell.get(provider, UNIFORM)
         return rng.betavariate(b.alpha, b.beta)
 
     return max(available_providers, key=draw)
-
-
-def posteriors(
-    available_providers: List[str], counts: CellCounts, l1: Optional[int], l2: Optional[int]
-) -> Dict[str, Beta]:
-    return {p: posterior(counts, p, l1, l2) for p in available_providers}

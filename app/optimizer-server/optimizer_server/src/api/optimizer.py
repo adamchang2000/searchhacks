@@ -12,12 +12,16 @@ from ninja import Field, Router, Schema
 from ninja.errors import HttpError
 from pydantic import ConfigDict, StrictBool
 
+from searchhacks_types.search_provider import SearchProvider
+
 from optimizer_server.src.apps.searches.models import Feedback, Search
 from optimizer_server.src.lib.classifier import classify
-from optimizer_server.src.lib.optimizer import categories, choose_provider
-from optimizer_server.src.lib.optimizer.stats import feedback_counts
+from optimizer_server.src.lib.optimizer import categories, choose_provider, distribution
 
 router = Router(tags=["optimizer"])
+
+# Provider names a caller may offer: the Telem slugs in lib/types SearchProvider.
+KNOWN_PROVIDERS = frozenset(p.value for p in SearchProvider)
 
 
 class WhichSearchRequest(Schema):
@@ -54,6 +58,12 @@ class SubmitFeedbackResponse(Schema):
 
 @router.post("/which_search", response=WhichSearchResponse)
 def which_search(request, body: WhichSearchRequest):
+    unknown = sorted({p for p in body.available_providers if p not in KNOWN_PROVIDERS})
+    if unknown:
+        raise HttpError(
+            422,
+            f"unknown providers: {', '.join(unknown)}. Known: {', '.join(sorted(KNOWN_PROVIDERS))}",
+        )
     if body.override_query_category is not None:
         if not categories.is_known(body.override_query_category):
             raise HttpError(422, f"unknown query category: {body.override_query_category}")
@@ -68,7 +78,10 @@ def which_search(request, body: WhichSearchRequest):
             source = classification.source
 
     l1, l2 = (path.l1, path.l2) if path is not None else (None, None)
-    provider = choose_provider(body.available_providers, feedback_counts(), l1, l2)
+    # Hot path: look up the precomputed posteriors (in memory) and Thompson-sample. No feedback
+    # aggregation here; `optimizer-recompute` refreshes the snapshot out of band.
+    cell = distribution.current().cell(l1, l2)
+    provider = choose_provider(body.available_providers, cell)
     search = Search.objects.create(
         query=body.query,
         available_providers=body.available_providers,
