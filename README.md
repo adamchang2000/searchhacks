@@ -69,3 +69,85 @@ make mock-driver ARGS="--n 500 --concurrency 8"
 
 After changing any API schema on the server, run `make generate-api` and commit the updated
 `lib/optimizer-protocol/schema.json` and `src/generated/api.ts`.
+
+## Deployment
+
+Two exe.dev VMs, set up **identically** (Ubuntu 24.04, user `exedev`, repo at `~/searchhacks`,
+`uv` + Node 22, every Python and JS package synced). They differ only in which
+`searchhacks-*` systemd services each one has enabled.
+
+| VM | Role | Reachable from the other VM at |
+|---|---|---|
+| `searchhacks-optimizer.exe.xyz` | long-lived optimizer server (`searchhacks-optimizer`, port 8000) | `https://optimizer.int.exe.xyz/` |
+| `searchhacks-driver.exe.xyz` | drivers: mock driver now, chatbot / driver server later | `https://driver.int.exe.xyz/` |
+
+**Cross-VM traffic:** exe.dev VMs share no private network. Each direction uses an exe.dev
+**peer integration** (already attached both ways). The calling VM hits `https://<name>.int.exe.xyz/`
+and exe.dev injects credentials at the network edge, so both VMs stay private and hold no API keys.
+Integrations target port **8000** by default, so any server we run on either VM should listen on
+`0.0.0.0:8000`.
+
+### Layout
+
+```
+deploy/
+├── bootstrap.sh              # one-time, idempotent: install uv + node, clone, then update.sh
+├── update.sh                 # git pull, uv sync every app/*/pyproject.toml, npm ci,
+│                             #   install unit files, restart this VM's enabled searchhacks-* units
+└── systemd/
+    └── searchhacks-optimizer.service   # runs migrations (ExecStartPre), then the server on :8000
+```
+
+`update.sh` generates `app/<python app>/config/.env` with a random `SECRET_KEY` the first time.
+That file stays on the VM and is gitignored.
+
+### One-time setup
+
+From your laptop, after the repo is pushed to `main`:
+
+```bash
+make bootstrap                                          # both VMs, identical
+make enable HOST=optimizer UNIT=searchhacks-optimizer   # optimizer VM only
+```
+
+Check from the driver VM:
+
+```bash
+ssh searchhacks-driver.exe.xyz curl -s https://optimizer.int.exe.xyz/api/health
+```
+
+To browse the API docs yourself (exe.dev login required), point the public proxy at port 8000:
+`ssh exe.dev share port searchhacks-optimizer 8000`, then open https://searchhacks-optimizer.exe.xyz/api/docs.
+
+### Shipping changes
+
+Push to `main`, then:
+
+```bash
+make deploy                                            # update.sh on every VM
+make logs HOST=optimizer UNIT=searchhacks-optimizer    # tail logs
+```
+
+### Adding a service (e.g. a Python driver server)
+
+1. Put the app in `app/<name>/` with its own `pyproject.toml`. `update.sh` picks it up automatically.
+2. Add `deploy/systemd/searchhacks-<name>.service`, listening on `0.0.0.0:8000`.
+3. `make deploy && make enable HOST=driver UNIT=searchhacks-<name>`.
+
+### Running the mock driver
+
+On the driver VM, use `tmux` for long runs:
+
+```bash
+cd ~/searchhacks
+npm start -w @searchhacks/mock-driver -- --server https://optimizer.int.exe.xyz --n 5000 --concurrency 16
+```
+
+### Notes / open questions
+
+- If the GitHub repo is private, each VM needs a read-only deploy key or `gh auth login`
+  before `make bootstrap`.
+- SQLite lives at `app/optimizer-server/db.sqlite3` on the optimizer VM. Back it up before
+  doing anything destructive.
+- The dashboard (`app/optimizer-ui`) isn't deployed yet. Run it locally, or build it and serve
+  the static files from the optimizer VM.

@@ -1,0 +1,15 @@
+# Optimizer server. Enable on the optimizer VM:  make enable HOST=optimizer UNIT=searchhacks-optimizer
+[Unit]
+Description=SearchHacks optimizer server
+After=network.target
+
+[Service]
+User=exedev
+WorkingDirectory=/home/exedev/searchhacks/app/optimizer-server
+ExecStartPre=/usr/local/bin/uv run optimizer-manage --config config/prod.json -- migrate --no-input
+ExecStart=/usr/local/bin/uv run optimizer-server --config config/prod.json --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

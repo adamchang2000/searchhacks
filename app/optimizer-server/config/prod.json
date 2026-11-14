@@ -1,0 +1,10 @@
+{
+  "env_file": ".env",
+  "db_config": {
+    "type": "sqlite",
+    "config": {
+      "type": "file",
+      "file": "db.sqlite3"
+    }
+  }
+}
