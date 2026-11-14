@@ -104,8 +104,6 @@ export function ShareChart({ snapshots, selected, onSelect, colors }: Props) {
                 y2={M.top + ih}
                 stroke="var(--reset-marker)"
                 strokeWidth={2}
-                strokeDasharray="0.5 4"
-                strokeLinecap="round"
               />
               <text
                 x={x(i) - 4}
