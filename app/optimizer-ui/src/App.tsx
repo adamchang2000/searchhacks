@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { Overview } from "./pages/Overview";
 import { Searches } from "./pages/Searches";
+import { Optimizer } from "./pages/Optimizer";
 import { API_BASE_URL, REFRESH_MS } from "./lib/api";
 
 function ServerStatus() {
@@ -47,6 +48,9 @@ function App() {
             <NavLink to="/searches" className={navClass}>
               Searches
             </NavLink>
+            <NavLink to="/optimizer" className={navClass}>
+              Optimizer
+            </NavLink>
           </nav>
           <span className="ml-auto">
             <ServerStatus />
@@ -57,6 +61,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/searches" element={<Searches />} />
+          <Route path="/optimizer" element={<Optimizer />} />
         </Routes>
       </main>
     </div>
