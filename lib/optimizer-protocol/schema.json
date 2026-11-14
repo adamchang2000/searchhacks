@@ -98,9 +98,88 @@
             "in": "query",
             "name": "limit",
             "schema": {
-              "default": 100,
+              "default": 50,
               "title": "Limit",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "provider",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "feedback",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "good",
+                    "bad",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feedback"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "category_l1",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category L1"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             },
             "required": false
           }
@@ -111,16 +190,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SearchOut"
-                  },
-                  "title": "Response",
-                  "type": "array"
+                  "$ref": "#/components/schemas/SearchPageOut"
                 }
               }
             }
           }
         },
+        "description": "Newest first. `category_l1=-1` selects unclassified searches.",
         "tags": [
           "ui"
         ]
@@ -147,6 +223,50 @@
             }
           }
         },
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/api/ui/stats/traffic": {
+      "get": {
+        "operationId": "optimizer_server_src_api_ui_stats_traffic",
+        "summary": "Traffic",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "minutes",
+            "schema": {
+              "default": 60,
+              "title": "Minutes",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "bucket_seconds",
+            "schema": {
+              "default": 60,
+              "title": "Bucket Seconds",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrafficOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Searches per time bucket over the trailing `minutes`, oldest bucket first.\n\nEmpty buckets are included so the series is continuous.",
         "tags": [
           "ui"
         ]
@@ -315,6 +435,18 @@
               }
             ],
             "title": "Is Good"
+          },
+          "feedback_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback At"
           }
         },
         "required": [
@@ -326,9 +458,31 @@
           "category_l1",
           "category_l2",
           "category_source",
-          "is_good"
+          "is_good",
+          "feedback_at"
         ],
         "title": "SearchOut",
+        "type": "object"
+      },
+      "SearchPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "SearchPageOut",
         "type": "object"
       },
       "ProviderStatsOut": {
@@ -369,6 +523,76 @@
           "good_rate"
         ],
         "title": "ProviderStatsOut",
+        "type": "object"
+      },
+      "TrafficBucketOut": {
+        "properties": {
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "by_provider": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Provider",
+            "type": "object"
+          },
+          "good": {
+            "title": "Good",
+            "type": "integer"
+          },
+          "bad": {
+            "title": "Bad",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "by_provider",
+          "good",
+          "bad",
+          "pending"
+        ],
+        "title": "TrafficBucketOut",
+        "type": "object"
+      },
+      "TrafficOut": {
+        "properties": {
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "bucket_seconds": {
+            "title": "Bucket Seconds",
+            "type": "integer"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficBucketOut"
+            },
+            "title": "Buckets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "bucket_seconds",
+          "buckets"
+        ],
+        "title": "TrafficOut",
         "type": "object"
       }
     }

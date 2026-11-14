@@ -62,7 +62,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Searches */
+        /**
+         * List Searches
+         * @description Newest first. `category_l1=-1` selects unclassified searches.
+         */
         get: operations["optimizer_server_src_api_ui_searches_list_searches"];
         put?: never;
         post?: never;
@@ -81,6 +84,28 @@ export interface paths {
         };
         /** Provider Stats */
         get: operations["optimizer_server_src_api_ui_stats_provider_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ui/stats/traffic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Traffic
+         * @description Searches per time bucket over the trailing `minutes`, oldest bucket first.
+         *
+         *     Empty buckets are included so the series is continuous.
+         */
+        get: operations["optimizer_server_src_api_ui_stats_traffic"];
         put?: never;
         post?: never;
         delete?: never;
@@ -158,6 +183,15 @@ export interface components {
             category_source: string;
             /** Is Good */
             is_good: boolean | null;
+            /** Feedback At */
+            feedback_at: string | null;
+        };
+        /** SearchPageOut */
+        SearchPageOut: {
+            /** Items */
+            items: components["schemas"]["SearchOut"][];
+            /** Total */
+            total: number;
         };
         /** ProviderStatsOut */
         ProviderStatsOut: {
@@ -171,6 +205,41 @@ export interface components {
             num_good: number;
             /** Good Rate */
             good_rate: number | null;
+        };
+        /** TrafficBucketOut */
+        TrafficBucketOut: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /** By Provider */
+            by_provider: {
+                [key: string]: number;
+            };
+            /** Good */
+            good: number;
+            /** Bad */
+            bad: number;
+            /** Pending */
+            pending: number;
+        };
+        /** TrafficOut */
+        TrafficOut: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Bucket Seconds */
+            bucket_seconds: number;
+            /** Buckets */
+            buckets: components["schemas"]["TrafficBucketOut"][];
         };
     };
     responses: never;
@@ -253,6 +322,11 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                offset?: number;
+                provider?: string | null;
+                feedback?: ("good" | "bad" | "none") | null;
+                category_l1?: number | null;
+                q?: string | null;
             };
             header?: never;
             path?: never;
@@ -266,7 +340,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SearchOut"][];
+                    "application/json": components["schemas"]["SearchPageOut"];
                 };
             };
         };
@@ -287,6 +361,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderStatsOut"][];
+                };
+            };
+        };
+    };
+    optimizer_server_src_api_ui_stats_traffic: {
+        parameters: {
+            query?: {
+                minutes?: number;
+                bucket_seconds?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficOut"];
                 };
             };
         };

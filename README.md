@@ -66,7 +66,8 @@ Optimizer protocol (SDK / drivers ↔ optimizer server):
 
 `is_good` is a placeholder until we decide what feedback really is.
 
-Dashboard endpoints live under `/api/ui/` (`GET /api/ui/searches`, `GET /api/ui/stats/providers`).
+Dashboard endpoints live under `/api/ui/` (`GET /api/ui/searches` (filterable, paginated), `GET /api/ui/stats/providers`,
+`GET /api/ui/stats/traffic` (searches per time bucket by provider)).
 They back `app/optimizer-ui` only, aren't part of the core protocol, and are free to change with the UI.
 
 ## Development
@@ -75,7 +76,7 @@ They back `app/optimizer-ui` only, aren't part of the core protocol, and are fre
 make install        # uv sync + npm install
 make migrate
 make server         # http://localhost:8000, API docs at /api/docs
-make ui             # http://localhost:5173
+make ui             # http://localhost:5173 (set VITE_API_BASE_URL to point at another server)
 make mock-driver ARGS="--n 500 --concurrency 8"
 make typecheck      # tsc across every TS workspace
 ```
