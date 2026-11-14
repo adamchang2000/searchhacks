@@ -118,8 +118,8 @@ deploy/
     └── searchhacks-optimizer.service   # runs migrations (ExecStartPre), then the server on :8000
 ```
 
-`update.sh` generates `app/<python app>/config/.env` with a random `SECRET_KEY` the first time.
-That file stays on the VM and is gitignored.
+There is no prod config: the VMs run everything with the same committed `config/dev.json`
+(and `config/dev.env`) used locally, `DEBUG` included.
 
 ### One-time setup
 

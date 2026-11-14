@@ -8,13 +8,9 @@ main() {
   cd "$HOME/searchhacks"
   git pull --ff-only
 
-  # Every Python app: deps + a SECRET_KEY env file (generated once, never committed).
+  # Every Python app. Everything runs with its committed dev config; there is no prod config.
   for pyproject in app/*/pyproject.toml; do
-    app_dir="$(dirname "$pyproject")"
-    (cd "$app_dir" && uv sync)
-    if [ -d "$app_dir/config" ] && [ ! -f "$app_dir/config/.env" ]; then
-      printf 'SECRET_KEY=%s\n' "$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')" > "$app_dir/config/.env"
-    fi
+    (cd "$(dirname "$pyproject")" && uv sync)
   done
 
   # All JS workspaces.
